@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="fi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex, nofollow" />
+<title>Yhteiskunta — testaus &amp; kehitys</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Source+Sans+3:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-grad:linear-gradient(175deg,#101f33 0%,#0c1828 100%);
+    --card:#12233a; --card-2:#0d1c30; --border:#263a54; --border-2:#2a3d57;
+    --text:#e9e2cf; --heading:#f0e8d2; --body:#cfd6de; --muted:#93a3ba;
+    --gold:#c9a227; --gold-grad:linear-gradient(180deg,#d4af37,#b8922a); --gold-dark:#8a6d1f;
+    --positive:#7fbf8f; --negative:#c9714f;
+    --serif:'Cormorant Garamond',serif; --sans:'Source Sans 3',sans-serif; --mono:'IBM Plex Mono',monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;min-height:100vh;background:var(--bg-grad);background-attachment:fixed;font-family:var(--sans);color:var(--body);line-height:1.6}
+  a{color:var(--gold)}
+  h1,h2,h3{font-family:var(--serif);color:var(--heading);margin:0 0 6px;text-wrap:balance}
+  .wrap{max-width:920px;margin:0 auto;padding:40px 20px 90px}
+
+  /* ---- Salasanaportti ---- */
+  #gate{position:fixed;inset:0;background:var(--bg-grad);display:flex;align-items:center;justify-content:center;padding:20px;z-index:50}
+  .gate-card{background:var(--card);border:1px solid var(--border-2);border-radius:12px;padding:36px 32px;max-width:380px;width:100%;text-align:center;box-shadow:0 30px 60px -20px rgba(0,0,0,.5)}
+  .gate-card .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:2.5px;text-transform:uppercase;color:var(--gold-dark);margin-bottom:10px}
+  .gate-card h1{font-size:26px;margin-bottom:8px}
+  .gate-card p{font-size:14px;color:var(--muted);margin:0 0 20px}
+  #gate input{width:100%;padding:11px 14px;border-radius:7px;border:1px solid var(--border-2);background:var(--card-2);color:var(--text);font-family:var(--mono);font-size:15px;letter-spacing:1px;margin-bottom:12px}
+  #gate input:focus{outline:none;border-color:var(--gold)}
+  #gate button{width:100%;padding:11px;border-radius:7px;border:none;background:var(--gold-grad);color:#14243a;font-weight:700;font-size:15px;cursor:pointer;font-family:var(--sans)}
+  #gate button:active{transform:scale(.98)}
+  #gateError{color:var(--negative);font-size:13px;margin-top:10px;display:none}
+  .shake{animation:shake .35s}
+  @keyframes shake{20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
+
+  /* ---- Sisältö ---- */
+  #app{display:none}
+  header.top{margin-bottom:44px}
+  header.top .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:2.5px;text-transform:uppercase;color:var(--gold-dark);margin-bottom:10px}
+  header.top h1{font-size:40px}
+  header.top p{max-width:60ch;color:var(--muted);font-size:15.5px}
+
+  section{margin:52px 0}
+  section .sec-num{font-family:var(--mono);color:var(--gold);font-size:12px;letter-spacing:1.5px;display:block;margin-bottom:4px}
+  section h2{font-size:24px;margin-bottom:6px}
+  section > p.lede{color:var(--muted);font-size:14.5px;max-width:65ch;margin:0 0 22px}
+
+  /* ---- Roadmap ---- */
+  .road-group{margin-bottom:26px}
+  .road-group h3{font-family:var(--sans);font-size:13px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);font-weight:700;margin:0 0 12px}
+  .road-item{display:flex;gap:14px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--border)}
+  .road-item:last-child{border-bottom:none}
+  .pill{font-family:var(--mono);font-size:10.5px;letter-spacing:.5px;font-weight:600;padding:3px 9px;border-radius:100px;white-space:nowrap;flex:none;margin-top:2px}
+  .pill-done{background:rgba(127,191,143,.15);color:var(--positive);border:1px solid rgba(127,191,143,.35)}
+  .pill-progress{background:rgba(201,162,39,.15);color:var(--gold);border:1px solid rgba(201,162,39,.35)}
+  .pill-planned{background:rgba(147,163,186,.12);color:var(--muted);border:1px solid var(--border-2)}
+  .road-item div.txt strong{color:var(--text);font-weight:600;display:block;font-size:15px}
+  .road-item div.txt span{font-size:13.5px;color:var(--muted)}
+
+  /* ---- Bugit ---- */
+  .issues-list{border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--card)}
+  .issue-row{display:flex;gap:12px;align-items:flex-start;padding:14px 16px;border-bottom:1px solid var(--border)}
+  .issue-row:last-child{border-bottom:none}
+  .issue-row:hover{background:var(--card-2)}
+  .issue-state{font-family:var(--mono);font-size:10px;letter-spacing:.5px;font-weight:700;text-transform:uppercase;padding:3px 8px;border-radius:100px;flex:none;margin-top:3px}
+  .issue-state.open{background:rgba(201,162,39,.18);color:var(--gold)}
+  .issue-state.closed{background:rgba(127,191,143,.15);color:var(--positive)}
+  .issue-body a.title{color:var(--text);font-weight:600;text-decoration:none;font-size:15px}
+  .issue-body a.title:hover{color:var(--gold)}
+  .issue-meta{font-family:var(--mono);font-size:11.5px;color:var(--muted);margin-top:4px}
+  .issue-labels{display:inline-flex;gap:5px;margin-left:8px}
+  .label-chip{font-size:10px;padding:1px 7px;border-radius:100px;background:var(--border);color:var(--body)}
+  .issues-empty,.issues-error{padding:22px 16px;color:var(--muted);font-size:14px;text-align:center}
+  .issues-loading{padding:22px 16px;color:var(--muted);font-size:14px;text-align:center;font-family:var(--mono)}
+
+  /* ---- Lomake ---- */
+  form.report{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:22px 24px}
+  .field{margin-bottom:16px}
+  .field label{display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px}
+  .field input[type=text], .field textarea{width:100%;padding:10px 12px;border-radius:7px;border:1px solid var(--border-2);background:var(--card-2);color:var(--text);font-family:var(--sans);font-size:14.5px}
+  .field input[type=text]:focus, .field textarea:focus{outline:none;border-color:var(--gold)}
+  .field textarea{min-height:100px;resize:vertical}
+  .type-toggle{display:flex;gap:8px}
+  .type-toggle label{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;border:1px solid var(--border-2);border-radius:7px;cursor:pointer;font-size:14px;color:var(--muted);font-weight:600}
+  .type-toggle input{accent-color:#c9a227}
+  .type-toggle input:checked + span{color:var(--text)}
+  .form-actions{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-top:20px}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:7px;font-weight:700;cursor:pointer;border:none;font-family:var(--sans);font-size:14.5px;padding:11px 20px;transition:filter .15s,transform .1s}
+  .btn:active{transform:scale(.98)}
+  .btn-gold{background:var(--gold-grad);color:#14243a}
+  .btn-gold:hover{filter:brightness(1.07)}
+  .btn-outline{background:transparent;border:1.5px solid var(--border-2);color:var(--body)}
+  .btn-outline:hover{border-color:var(--gold);color:var(--gold)}
+  .form-note{font-size:12.5px;color:var(--muted);margin-top:14px}
+
+  footer{margin-top:70px;padding-top:24px;border-top:1px solid var(--border);color:var(--muted);font-size:12.5px}
+  footer p{max-width:70ch}
+
+  @media (max-width:600px){
+    header.top h1{font-size:30px}
+    .type-toggle{flex-direction:column}
+  }
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <div class="gate-card">
+    <div class="eyebrow">Vain testaajille</div>
+    <h1>🔒 Yhteiskunta</h1>
+    <p>Tämä sivu on tarkoitettu pelin testaajille. Syötä salasana jatkaaksesi.</p>
+    <input type="password" id="gatePw" placeholder="Salasana" autocomplete="off" />
+    <button type="button" id="gateBtn">Kirjaudu</button>
+    <div id="gateError">Väärä salasana — yritä uudelleen.</div>
+  </div>
+</div>
+
+<div id="app">
+<div class="wrap">
+
+  <header class="top">
+    <div class="eyebrow">Testaus &amp; kehitys</div>
+    <h1>Yhteiskunta — testaajien sivu</h1>
+    <p>Kiitos että testaat peliä! Täältä näet mitä on juuri tehty ja mitä on tulossa, sekä voit ilmoittaa bugeja ja omia ideoita. Kaikki ilmoitukset menevät suoraan projektin GitHub-issueihin, joten näet myös niiden tilan täältä.</p>
+  </header>
+
+  <section id="roadmap">
+    <span class="sec-num">01</span>
+    <h2>Kehityssuunnitelma</h2>
+    <p class="lede">Tämä lista päivittyy sitä mukaa kun peliä kehitetään. "Valmis"-merkityt asiat ovat jo pelattavissa nykyisessä versiossa.</p>
+
+    <div class="road-group">
+      <h3>Juuri valmistunut</h3>
+      <div class="road-item"><span class="pill pill-done">Valmis</span><div class="txt"><strong>Aikakausi jaettu kahtia</strong><span>Agraarinen-kausi jaettiin Muinaisaikaan ja Keskiaikaan — nyt viisi aikakautta neljän sijaan, historiallisesti tarkemmin rajattuna.</span></div></div>
+      <div class="road-item"><span class="pill pill-done">Valmis</span><div class="txt"><strong>Sivilisaatiokohtaiset aikakausinimet</strong><span>Jokainen 20 sivilisaatiosta näkee oman, historiallisesti oikean nimen ja tarinan jokaiselle aikakaudelle (esim. Rooma: Tasavalta → Italian kaupunkivaltiot → Italian yhdistyminen…).</span></div></div>
+      <div class="road-item"><span class="pill pill-done">Valmis</span><div class="txt"><strong>Yksi vuoropituus</strong><span>1 vuoden vuoro poistettu — peli etenee nyt aina 5 vuoden jaksoissa, mikä selkeyttää tempoa.</span></div></div>
+      <div class="road-item"><span class="pill pill-done">Valmis</span><div class="txt"><strong>Aikakausisiirtymän selitys</strong><span>Peli kertoo nyt selvästi, ettei aikakausi vaihdu kiinteänä pelivuotena vaan tutkimuksen ja väestön kasvun myötä.</span></div></div>
+    </div>
+
+    <div class="road-group">
+      <h3>Seuraavaksi</h3>
+      <div class="road-item"><span class="pill pill-progress">Suunnitteilla</span><div class="txt"><strong>Kierrosmäärä-arvio peliohjeisiin</strong><span>Aloitusnäkymään lisätään arvio siitä, montako vuoroa yhteiskuntavaihe tyypillisesti kestää.</span></div></div>
+      <div class="road-item"><span class="pill pill-progress">Suunnitteilla</span><div class="txt"><strong>Palvelut &amp; hoiva -sektorin syventäminen</strong><span>Uusi valinta: yhteisöllinen lähihoiva vai ammattimaiset palvelut — samaan tapaan kuin terveydenhuollon nykyinen ehkäisevä/sairaalapainotteinen-valinta.</span></div></div>
+      <div class="road-item"><span class="pill pill-progress">Suunnitteilla</span><div class="txt"><strong>Uskonto &amp; taide -sektoreiden moodit</strong><span>Laadulliset suuntaukset (esim. sekularisoituminen, joukkoviihde) samalla mallilla kuin maatalous ja opetus jo nyt.</span></div></div>
+    </div>
+
+    <div class="road-group">
+      <h3>Myöhemmin</h3>
+      <div class="road-item"><span class="pill pill-planned">Ideoitu</span><div class="txt"><strong>Sivilisaatiokohtaiset historialliset tapahtumat</strong><span>10–15 uutta tapahtumaa, jotka on sidottu yksittäiseen sivilisaatioon eikä vain ilmastovyöhykkeeseen.</span></div></div>
+      <div class="road-item"><span class="pill pill-planned">Ideoitu</span><div class="txt"><strong>Aikakauden murroskortti</strong><span>Näkyvä tarinakortti juuri sillä hetkellä kun aikakausi vaihtuu, nostaen esiin sen todellisen historiallisen taustan.</span></div></div>
+      <div class="road-item"><span class="pill pill-planned">Ideoitu</span><div class="txt"><strong>Opettajan pikaopas</strong><span>Valmiit mallit 45 min tunnille, kaksoistunnille ja monen oppitunnin projektille.</span></div></div>
+      <div class="road-item"><span class="pill pill-planned">Ideoitu</span><div class="txt"><strong>Tarkistuspiste-tallennus</strong><span>Pelin voi jatkaa myöhemmin täsmälleen samasta kohdasta — tärkeää jos peli venyy usealle oppitunnille.</span></div></div>
+    </div>
+  </section>
+
+  <section id="bugs">
+    <span class="sec-num">02</span>
+    <h2>Bugit ja ehdotukset</h2>
+    <p class="lede">Suora, elävä lista projektin GitHub-issueista. "Avoin" tarkoittaa ettei asiaa ole vielä käsitelty; "Korjattu" että se on jo hoidettu.</p>
+    <div class="issues-list" id="issuesList">
+      <div class="issues-loading">Ladataan…</div>
+    </div>
+  </section>
+
+  <section id="report">
+    <span class="sec-num">03</span>
+    <h2>Ilmoita bugi tai ehdotus</h2>
+    <p class="lede">Täytä lomake ja paina "Lähetä GitHubiin" — se avaa valmiiksi täytetyn ilmoituksen, jonka vain vahvistat lähetettäväksi. Tarvitset ilmaisen GitHub-tunnuksen (samalla tunnuksella jäät myös seuraamaan mitä ilmoituksellesi tapahtuu).</p>
+    <form class="report" id="reportForm">
+      <div class="field">
+        <label>Millainen ilmoitus?</label>
+        <div class="type-toggle">
+          <label><input type="radio" name="type" value="bug" checked /><span>🐞 Bugi / virhe</span></label>
+          <label><input type="radio" name="type" value="enhancement" /><span>💡 Kehitysehdotus</span></label>
+        </div>
+      </div>
+      <div class="field">
+        <label for="rTitle">Otsikko</label>
+        <input type="text" id="rTitle" placeholder="Esim. Väestömäärä näyttää negatiivista kuolemien jälkeen" />
+      </div>
+      <div class="field">
+        <label for="rDesc">Kuvaus</label>
+        <textarea id="rDesc" placeholder="Mitä tapahtui? Mitä odotit tapahtuvan? Millä sivilisaatiolla ja aikakaudella olit?"></textarea>
+      </div>
+      <div class="field">
+        <label for="rName">Nimesi (näkyy ilmoituksessa, vapaaehtoinen)</label>
+        <input type="text" id="rName" placeholder="Esim. Matti" />
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn btn-gold" id="sendGithub">Lähetä GitHubiin →</button>
+        <button type="button" class="btn btn-outline" id="sendMail">Lähetä sähköpostilla sen sijaan</button>
+      </div>
+      <div class="form-note">GitHub-ilmoitus näkyy heti yllä olevassa listassa. Sähköposti ei näy listassa, mutta on nopeampi jos et halua luoda tunnusta.</div>
+    </form>
+  </section>
+
+  <footer>
+    <p>Tämä sivu ei ole julkisesti linkitetty pelin muualta, mutta salasana on tarkoitettu vain karsimaan satunnaiset kävijät — ei suojaamaan arkaluontoista tietoa. Älä jaa linkkiä tai salasanaa eteenpäin.</p>
+  </footer>
+
+</div>
+</div>
+
+<script>
+(function () {
+  var REPO = "Eerotuomenoksa/Yhteiskunta-peli";
+  var PASSWORD = "Tuuliniemi26_Pel1";
+  var MAIL_TO = "eero.tuomenoksa@gmail.com";
+
+  // ---- Salasanaportti ----
+  var gate = document.getElementById("gate");
+  var app = document.getElementById("app");
+  var pwInput = document.getElementById("gatePw");
+  var gateBtn = document.getElementById("gateBtn");
+  var gateError = document.getElementById("gateError");
+
+  function unlock() {
+    gate.style.display = "none";
+    app.style.display = "block";
+    try { sessionStorage.setItem("yhteiskunta_testaajat_unlocked", "1"); } catch (e) {}
+    loadIssues();
+  }
+  function tryUnlock() {
+    if (pwInput.value === PASSWORD) {
+      unlock();
+    } else {
+      gateError.style.display = "block";
+      gate.querySelector(".gate-card").classList.remove("shake");
+      void gate.querySelector(".gate-card").offsetWidth;
+      gate.querySelector(".gate-card").classList.add("shake");
+    }
+  }
+  gateBtn.addEventListener("click", tryUnlock);
+  pwInput.addEventListener("keydown", function (e) { if (e.key === "Enter") tryUnlock(); });
+
+  try {
+    if (sessionStorage.getItem("yhteiskunta_testaajat_unlocked") === "1") unlock();
+  } catch (e) {}
+
+  // ---- GitHub-issuelista ----
+  function timeAgo(iso) {
+    var diffMs = Date.now() - new Date(iso).getTime();
+    var days = Math.floor(diffMs / 86400000);
+    if (days <= 0) return "tänään";
+    if (days === 1) return "eilen";
+    if (days < 30) return days + " pv sitten";
+    var months = Math.floor(days / 30);
+    if (months < 12) return months + " kk sitten";
+    return Math.floor(months / 12) + " v sitten";
+  }
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+  function loadIssues() {
+    var list = document.getElementById("issuesList");
+    fetch("https://api.github.com/repos/" + REPO + "/issues?state=all&per_page=30&sort=created&direction=desc")
+      .then(function (r) {
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        return r.json();
+      })
+      .then(function (data) {
+        var issues = (data || []).filter(function (i) { return !i.pull_request; });
+        if (!issues.length) {
+          list.innerHTML = '<div class="issues-empty">Ei vielä yhtään ilmoitusta — ole ensimmäinen alla olevalla lomakkeella!</div>';
+          return;
+        }
+        list.innerHTML = issues.map(function (issue) {
+          var stateLabel = issue.state === "open" ? "Avoin" : "Korjattu";
+          var stateClass = issue.state === "open" ? "open" : "closed";
+          var labels = (issue.labels || []).map(function (l) {
+            return '<span class="label-chip">' + escapeHtml(l.name) + "</span>";
+          }).join("");
+          return (
+            '<div class="issue-row">' +
+              '<span class="issue-state ' + stateClass + '">' + stateLabel + "</span>" +
+              '<div class="issue-body">' +
+                '<a class="title" href="' + issue.html_url + '" target="_blank" rel="noopener">' + escapeHtml(issue.title) + "</a>" +
+                '<span class="issue-labels">' + labels + "</span>" +
+                '<div class="issue-meta">#' + issue.number + " · " + escapeHtml(issue.user.login) + " · " + timeAgo(issue.created_at) + "</div>" +
+              "</div>" +
+            "</div>"
+          );
+        }).join("");
+      })
+      .catch(function () {
+        list.innerHTML = '<div class="issues-error">Listaa ei juuri nyt saatu ladattua (GitHubin rajapinta voi olla tilapäisesti rajoitettu). Voit silti ilmoittaa alla — se näkyy täällä myöhemmin.</div>';
+      });
+  }
+
+  // ---- Ilmoituslomake ----
+  function currentReport() {
+    var type = document.querySelector('input[name="type"]:checked').value;
+    var title = document.getElementById("rTitle").value.trim() || (type === "bug" ? "Bugi-ilmoitus" : "Kehitysehdotus");
+    var desc = document.getElementById("rDesc").value.trim();
+    var name = document.getElementById("rName").value.trim();
+    return { type: type, title: title, desc: desc, name: name };
+  }
+  document.getElementById("sendGithub").addEventListener("click", function () {
+    var r = currentReport();
+    var body = (r.desc || "(ei kuvausta)") + (r.name ? "\n\n---\nIlmoittaja: " + r.name : "") + "\n\n_Lähetetty testaajat-sivun kautta._";
+    var url = "https://github.com/" + REPO + "/issues/new?" +
+      "title=" + encodeURIComponent(r.title) +
+      "&body=" + encodeURIComponent(body) +
+      "&labels=" + encodeURIComponent(r.type);
+    window.open(url, "_blank");
+  });
+  document.getElementById("sendMail").addEventListener("click", function () {
+    var r = currentReport();
+    var subject = (r.type === "bug" ? "[Bugi] " : "[Ehdotus] ") + r.title;
+    var body = (r.desc || "(ei kuvausta)") + (r.name ? "\n\n— " + r.name : "");
+    window.location.href = "mailto:" + MAIL_TO + "?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
+  });
+})();
+</script>
+
+</body>
+</html>

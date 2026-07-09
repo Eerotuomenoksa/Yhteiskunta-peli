@@ -11,8 +11,8 @@ Pelaaja johtaa 10 000 hengen yhteiskuntaa agraariajasta nykyaikaan tehden päät
 
 ## Ominaisuudet (tiivistetysti)
 
-- 20 historiallista sivilisaatiota, joilla omat statimuokkaimet
-- Neljä aikakautta (agraarinen → varhaisteollinen → teollinen → moderni), joilla omat tarinatyylit
+- 20 historiallista sivilisaatiota, joilla omat statimuokkaimet ja omat sivilisaatiokohtaiset aikakausinimet/-tarinat
+- Viisi aikakautta (muinaisaika → keskiaika → varhaisteollinen → teollinen → moderni), joilla omat tarinatyylit. Siirtymä ei ole sidottu kalenterivuoteen vaan tutkimus- ja väestökynnyksiin, joten sama aikakausi kestää eri sivilisaatioilla ja läpipeluilla eri pituisen ajan.
 - Hallintomuotojärjestelmä: heimoneuvostosta demokratiaan ja teokratiaan, lukitusehdot ja levottomuusmekaniikka
 - Yhdeksän työvoimasektoria erikoistumisliukureilla (terveydenhuolto, tutkimus, maatalous, koulutus jne.)
 - Väestönkehitysmoottori (syntyvyys, kuolleisuus, ikääntyneiden historiallisesti mallinnettu työpanos)

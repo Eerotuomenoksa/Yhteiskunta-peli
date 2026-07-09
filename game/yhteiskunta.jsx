@@ -8,7 +8,9 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianG
 // virallisen työvoiman ulkopuolella. Eläköityminen instituutiona on moderni keksintö (ensimmäinen valtiollinen
 // eläkejärjestelmä Saksassa 1889) — agraariyhteiskunnassa vanhukset eivät irtautuneet tuotannosta kokonaan.
 const ERAS = [
-  { name: "Agraarinen", feeds: 2.4, minPop: 300, research: 0, desc: "Hevonen ja aura. Lähes kaikkien on viljeltävä, jotta kaikki syövät.", hist: "Vastaa Eurooppaa ennen 1800-lukua: noin 75–90 % työvoimasta raatoi pelloilla.", childMort: 0.17, color: "#7a5c2e", elderCare: 0.55,
+  { name: "Muinaisaika", feeds: 2.4, minPop: 300, research: 0, desc: "Puuaura ja käsivoimin kynnetyt pellot. Lähes kaikkien on viljeltävä, jotta kaikki syövät.", hist: "Vastaa aikaa kirjoitustaidon synnystä noin vuoteen 1450: suurin osa maailman väestöstä eli tämän koko ajan maanviljelyksellä — sivilisaatio ei vaihda kautta minään tiettynä kalenterivuotena, vaan silloin kun tutkimuksesi ja väestösi riittävät.", childMort: 0.17, color: "#7a5c2e", elderCare: 0.55,
+    roles: { children: "Paimensivat karjaa, kantoivat vettä, karkottivat lintuja pelloilta ja hoitivat pienempiä sisaruksia jo 5–6-vuotiaasta — todellista lapsityötä.", youth: "Astuivat täyteen työhön noin 12–14-vuotiaana: kyntöä, kylvöä, karjanhoitoa.", elderly: "Eivät jääneet muodolliselle eläkkeelle: hoitivat lapsenlapsia, kehräsivät, korjasivat työkaluja ja välittivät kokemustietoa." } },
+  { name: "Keskiaika", feeds: 3.4, minPop: 1400, research: 160, desc: "Raskas aura, vuoroviljely ja vesimylly nostavat satoa — ja uudet kasvit löytävät hitaasti tiensä maanosasta toiseen.", hist: "Vastaa karkeasti vuosia 1450–1800: kauppaverkostot ja imperiumit yhdistyivät entistä tiiviimmin, ja esimerkiksi peruna ja maissi levisivät Euraasiaan mullistaen ruokahuoltoa paikoin. Rajakohta on suuntaa antava, ei kiinteä — sivilisaatiot etenevät tämän läpi eri tahtiin.", childMort: 0.14, color: "#6b4a3a", elderCare: 0.45,
     roles: { children: "Paimensivat karjaa, kantoivat vettä, karkottivat lintuja pelloilta ja hoitivat pienempiä sisaruksia jo 5–6-vuotiaasta — todellista lapsityötä.", youth: "Astuivat täyteen työhön noin 12–14-vuotiaana: kyntöä, kylvöä, karjanhoitoa.", elderly: "Eivät jääneet muodolliselle eläkkeelle: hoitivat lapsenlapsia, kehräsivät, korjasivat työkaluja ja välittivät kokemustietoa." } },
   { name: "Varhaisteollinen", feeds: 6, minPop: 4000, research: 250, desc: "Höyry, mylly ja vuoroviljely. Yksi viljelijä ruokkii kuusi.", hist: "Vastaa 1800-luvun puoliväliä: Englannissa 1851 maataloudessa oli enää 28 % työvoimasta.", childMort: 0.1, color: "#8a4b2a", elderCare: 0.35,
     roles: { children: "Moni lapsi työskenteli jo tehtaissa tai kaivoksissa ennen suojalakeja; osa jäi vielä maatilan askareisiin.", youth: "Oppipoika- ja tehdastyö yleistyi; muutto maalta kaupunkeihin alkoi.", elderly: "Muodollista eläkettä tuskin oli — vanhukset asuivat perheen luona ja tekivät kevyempiä kotitöitä niin kauan kuin jaksoivat." } },
@@ -22,10 +24,14 @@ const ERAS = [
 // Kun tutkimus etenee kohti seuraavaa aikakautta, tarinaan nostetaan aikakaudelle sopiva keksintö —
 // tämä tekee tutkimuksen tuntuvammaksi ja luo mielenkiintoa ilman, että pelimekaniikka muuttuu.
 const INVENTIONS_BY_ERA = [
-  [ { name: "Aura", desc: "puinen aura moninkertaistaa yhden viljelijän tuottavuuden." },
+  [ { name: "Pyörä", desc: "kuljetus ja savenvalanta helpottuvat merkittävästi." },
+    { name: "Pronssi", desc: "kupari ja tina seostettuina tekevät työkaluista ja aseista kestävämpiä." },
+    { name: "Kastelukanavat", desc: "veden ohjaaminen pelloille mahdollistaa viljelyn kuivemmillakin alueilla." },
+    { name: "Kirjoitus", desc: "varastojen ja verojen kirjanpito helpottuu merkittävästi." } ],
+  [ { name: "Raskas aura", desc: "rautaterä ja pyörät kääntävät raskaankin saven tehokkaasti." },
     { name: "Vuoroviljely", desc: "maan lepäännyttäminen vuorotellen pitää sadot tasaisempina." },
     { name: "Vesimylly", desc: "virtaava vesi jauhaa viljan — käsivoimaa säästyy muuhun työhön." },
-    { name: "Kirjoitus", desc: "varastojen ja verojen kirjanpito helpottuu merkittävästi." } ],
+    { name: "Merikompassi", desc: "suunnistaminen avomerellä avaa uusia kauppareittejä ja pitkiä purjehduksia." } ],
   [ { name: "Höyrykone", desc: "mekaaninen voima korvaa ensi kertaa lihasvoiman laajassa mitassa." },
     { name: "Rautatie", desc: "tavara ja väki liikkuvat nopeammin kuin koskaan aiemmin." },
     { name: "Rokotus", desc: "isorokkoa vastaan kehitetty menetelmä pelastaa tuhansia." },
@@ -41,31 +47,184 @@ const INVENTIONS_BY_ERA = [
 ];
 
 // Kultainen aikakausittainen "ääni"-tunniste kertomuskortin yläpuolelle (museo-ilme: sama korttipohja joka aikakaudella).
-const STORY_LABELS = ["Vanhat kertovat", "Lehti kirjoittaa", "Raportti toteaa", "Verkossa kerrotaan"];
+const STORY_LABELS = ["Vanhat kertovat", "Kronikka kertoo", "Lehti kirjoittaa", "Raportti toteaa", "Verkossa kerrotaan"];
 // health = lisä terveyskattavuuteen, resilience = katastrofien vakavuuskerroin (pienempi = kestävämpi),
 // minPop = aikakausien väestövaatimuksen kerroin, store = varastokerroin
+// climate = sivilisaation maantieteellinen ilmastovyöhyke, jota käytetään tapahtumapoolin suodattamiseen
+// (esim. halla ei voi viedä satoa aavikkosivilisaatiolta) — ks. EVENTS ja pickEvent().
 const CIVS = [
-  { key: "sumer", name: "Sumer", icon: "🏺", trait: "Kastelukanavat & nuolenpääkirjoitus", desc: "Ensimmäiset kaupungit, kirjanpito ja viljavarastot.", mods: { farm: 1.05, research: 1.1, store: 1.3 } },
-  { key: "egypti", name: "Egypti", icon: "🏜️", trait: "Niilin tulvat", desc: "Ennustettava tulvarytmi teki maataloudesta poikkeuksellisen tuottavaa.", mods: { farm: 1.2 } },
-  { key: "indus", name: "Induslaakso", icon: "🧱", trait: "Viemäröinti & kaupunkisuunnittelu", desc: "Harappan kaupungeissa oli maailman ensimmäiset viemärit.", mods: { health: 0.12, farm: 1.05 } },
-  { key: "kiina", name: "Kiina", icon: "🐉", trait: "Byrokratia & keksinnöt", desc: "Paperi, ruuti, kompassi — ja tuhatvuotinen virkamieslaitos.", mods: { research: 1.15, store: 1.1 } },
-  { key: "kreikka", name: "Kreikka", icon: "🏛️", trait: "Filosofia & tiede", desc: "Karut vuoret mutta kirkkaat ajatukset.", mods: { research: 1.25, farm: 0.9 } },
-  { key: "rooma", name: "Rooma", icon: "🛡️", trait: "Akveduktit & hallinto", desc: "Tiet, vesijohdot ja organisaatio, joka skaalautui imperiumiksi.", mods: { health: 0.1, minPop: 0.9 } },
-  { key: "persia", name: "Persia", icon: "🦁", trait: "Kuninkaan tie", desc: "Tehokas hallinto ja posti yhdistivät valtavan alueen.", mods: { minPop: 0.85, store: 1.1 } },
-  { key: "maya", name: "Maya", icon: "🌽", trait: "Tähtitiede & kalenteri", desc: "Huippumatematiikkaa — mutta kuivuudet koettelivat ankarasti.", mods: { research: 1.15, resilience: 1.15, farm: 0.95 } },
-  { key: "inka", name: "Inkat", icon: "🏔️", trait: "Qollqa-varastot & pengerviljely", desc: "Valtio varastoi ruokaa vuosiksi eteenpäin Andien rinteillä.", mods: { store: 1.5, farm: 1.1, research: 0.9 } },
-  { key: "atsteekit", name: "Atsteekit", icon: "🌋", trait: "Chinampa-kelluvat pellot", desc: "Tehoviljelyä järvellä ja nopeasti kasvava väestö.", mods: { birth: 1.15, farm: 1.05, health: -0.05 } },
-  { key: "intia", name: "Intia", icon: "🕉️", trait: "Nolla & suuret joet", desc: "Matematiikan lahja maailmalle ja Gangesin hedelmällinen tasanko.", mods: { birth: 1.1, research: 1.05 } },
-  { key: "japani", name: "Japani", icon: "🗾", trait: "Sisu & jälleenrakennus", desc: "Maanjäristysten ja taifuunien karaisema — kriiseistä noustaan nopeasti.", mods: { resilience: 0.75 } },
-  { key: "khmer", name: "Khmer", icon: "🛕", trait: "Barayt eli vesivarastot", desc: "Angkorin kastelujärjestelmä ruokki keskiajan suurimman kaupungin.", mods: { farm: 1.15, resilience: 1.1 } },
-  { key: "bysantti", name: "Bysantti", icon: "☦️", trait: "Sairaalat & diplomatia", desc: "Antiikin lääketiede säilyi ja kehittyi Konstantinopolissa.", mods: { health: 0.15, research: 0.95 } },
-  { key: "arabia", name: "Arabien kulta-aika", icon: "🌙", trait: "Viisauden talo", desc: "Bagdadissa käännettiin ja kehitettiin koko maailman tiede.", mods: { research: 1.2 } },
-  { key: "mali", name: "Mali", icon: "👑", trait: "Timbuktun kirjastot", desc: "Mansa Musan valtakunta — kultaa, kauppaa ja oppineisuutta.", mods: { store: 1.2, research: 1.05 } },
-  { key: "aksum", name: "Aksum / Etiopia", icon: "⛰️", trait: "Ylänköjen linnake", desc: "Vuoristo suojasi, terassit ruokkivat — harvinaisen sitkeä valtio.", mods: { resilience: 0.8, farm: 1.05 } },
-  { key: "pohjola", name: "Pohjola", icon: "⚔️", trait: "Karun maan kansa", desc: "Niukkuus opetti selviytymään — nälkävuodetkin kestetään.", mods: { resilience: 0.8, birth: 1.05, farm: 0.95 } },
-  { key: "polynesia", name: "Polynesia", icon: "🛶", trait: "Saariyhteisöjen taito", desc: "Pienet eristyneet yhteisöt oppivat pärjäämään vähällä väellä.", mods: { minPop: 0.7, farm: 1.05, research: 0.9 } },
-  { key: "eurooppa", name: "Länsi-Eurooppa", icon: "⚙️", trait: "Kirjapaino & kilpailu", desc: "Tiedon leviäminen kiihdytti teollistumista.", mods: { research: 1.1, minPop: 0.95 } },
+  { key: "sumer", name: "Sumer", icon: "🏺", trait: "Kastelukanavat & nuolenpääkirjoitus", desc: "Ensimmäiset kaupungit, kirjanpito ja viljavarastot.", mods: { farm: 1.05, research: 1.1, store: 1.3 }, climate: "arid" },
+  { key: "egypti", name: "Egypti", icon: "🏜️", trait: "Niilin tulvat", desc: "Ennustettava tulvarytmi teki maataloudesta poikkeuksellisen tuottavaa.", mods: { farm: 1.2 }, climate: "arid" },
+  { key: "indus", name: "Induslaakso", icon: "🧱", trait: "Viemäröinti & kaupunkisuunnittelu", desc: "Harappan kaupungeissa oli maailman ensimmäiset viemärit.", mods: { health: 0.12, farm: 1.05 }, climate: "monsoon" },
+  { key: "kiina", name: "Kiina", icon: "🐉", trait: "Byrokratia & keksinnöt", desc: "Paperi, ruuti, kompassi — ja tuhatvuotinen virkamieslaitos.", mods: { research: 1.15, store: 1.1 }, climate: "temperate" },
+  { key: "kreikka", name: "Kreikka", icon: "🏛️", trait: "Filosofia & tiede", desc: "Karut vuoret mutta kirkkaat ajatukset.", mods: { research: 1.25, farm: 0.9 }, climate: "mediterranean" },
+  { key: "rooma", name: "Rooma", icon: "🛡️", trait: "Akveduktit & hallinto", desc: "Tiet, vesijohdot ja organisaatio, joka skaalautui imperiumiksi.", mods: { health: 0.1, minPop: 0.9 }, climate: "mediterranean" },
+  { key: "persia", name: "Persia", icon: "🦁", trait: "Kuninkaan tie", desc: "Tehokas hallinto ja posti yhdistivät valtavan alueen.", mods: { minPop: 0.85, store: 1.1 }, climate: "arid" },
+  { key: "maya", name: "Maya", icon: "🌽", trait: "Tähtitiede & kalenteri", desc: "Huippumatematiikkaa — mutta kuivuudet koettelivat ankarasti.", mods: { research: 1.15, resilience: 1.15, farm: 0.95 }, climate: "tropical" },
+  { key: "inka", name: "Inkat", icon: "🏔️", trait: "Qollqa-varastot & pengerviljely", desc: "Valtio varastoi ruokaa vuosiksi eteenpäin Andien rinteillä.", mods: { store: 1.5, farm: 1.1, research: 0.9 }, climate: "mountain" },
+  { key: "atsteekit", name: "Atsteekit", icon: "🌋", trait: "Chinampa-kelluvat pellot", desc: "Tehoviljelyä järvellä ja nopeasti kasvava väestö.", mods: { birth: 1.15, farm: 1.05, health: -0.05 }, climate: "mountain" },
+  { key: "intia", name: "Intia", icon: "🕉️", trait: "Nolla & suuret joet", desc: "Matematiikan lahja maailmalle ja Gangesin hedelmällinen tasanko.", mods: { birth: 1.1, research: 1.05 }, climate: "monsoon" },
+  { key: "japani", name: "Japani", icon: "🗾", trait: "Sisu & jälleenrakennus", desc: "Maanjäristysten ja taifuunien karaisema — kriiseistä noustaan nopeasti.", mods: { resilience: 0.75 }, climate: "islandTemperate" },
+  { key: "khmer", name: "Khmer", icon: "🛕", trait: "Barayt eli vesivarastot", desc: "Angkorin kastelujärjestelmä ruokki keskiajan suurimman kaupungin.", mods: { farm: 1.15, resilience: 1.1 }, climate: "monsoon" },
+  { key: "bysantti", name: "Bysantti", icon: "☦️", trait: "Sairaalat & diplomatia", desc: "Antiikin lääketiede säilyi ja kehittyi Konstantinopolissa.", mods: { health: 0.15, research: 0.95 }, climate: "mediterranean" },
+  { key: "arabia", name: "Arabien kulta-aika", icon: "🌙", trait: "Viisauden talo", desc: "Bagdadissa käännettiin ja kehitettiin koko maailman tiede.", mods: { research: 1.2 }, climate: "arid" },
+  { key: "mali", name: "Mali", icon: "👑", trait: "Timbuktun kirjastot", desc: "Mansa Musan valtakunta — kultaa, kauppaa ja oppineisuutta.", mods: { store: 1.2, research: 1.05 }, climate: "arid" },
+  { key: "aksum", name: "Aksum / Etiopia", icon: "⛰️", trait: "Ylänköjen linnake", desc: "Vuoristo suojasi, terassit ruokkivat — harvinaisen sitkeä valtio.", mods: { resilience: 0.8, farm: 1.05 }, climate: "mountain" },
+  { key: "pohjola", name: "Pohjola", icon: "⚔️", trait: "Karun maan kansa", desc: "Niukkuus opetti selviytymään — nälkävuodetkin kestetään.", mods: { resilience: 0.8, birth: 1.05, farm: 0.95 }, climate: "cold" },
+  { key: "polynesia", name: "Polynesia", icon: "🛶", trait: "Saariyhteisöjen taito", desc: "Pienet eristyneet yhteisöt oppivat pärjäämään vähällä väellä.", mods: { minPop: 0.7, farm: 1.05, research: 0.9 }, climate: "islandTropical" },
+  { key: "eurooppa", name: "Länsi-Eurooppa", icon: "⚙️", trait: "Kirjapaino & kilpailu", desc: "Tiedon leviäminen kiihdytti teollistumista.", mods: { research: 1.1, minPop: 0.95 }, climate: "temperate" },
 ];
+
+// ============ SIVILISAATIOKOHTAISET AIKAKAUSINIMET ============
+// Mekaniikka (feeds/minPop/research/childMort jne.) on kaikilla sivilisaatioilla sama — vain
+// aikakauden NIMI ja historiallinen ankkuripiste (hist) vaihtelevat sivilisaation mukaan, jotta
+// jokainen 20 sivilisaatiosta kertoo oman, ajallisesti oikean tarinansa saman rungon läpi.
+// Kun sivilisaation "oma" historia loppuu ennen nykyaikaa (esim. Sumeri, Rooma, Inkat), myöhemmät
+// aikakaudet seuraavat samaa maantieteellistä aluetta sen todellisessa myöhemmässä historiassa —
+// sivilisaatio ei jää jumiin, vaan sen tarina jatkuu. CE()-hakufunktio palaa geneeriseen ERAS-nimeen,
+// jos sivilisaatiolle ei (vielä) ole kirjoitettu omaa tekstiä kielellä `lang`.
+const CIV_ERA_TEXT = {
+  sumer: [
+    { name: "Sumerin kaupunkivaltiot", hist: "Uruk, Ur ja Lagaš kilpailevat ja kukoistavat Eufratin ja Tigrisin välissä." },
+    { name: "Bagdadin kalifikunta", hist: "Sama joenvälinen alue kukoistaa islamilaisen kulta-ajan tieteen ja kaupan keskuksena, kunnes mongolit valtaavat Bagdadin 1258." },
+    { name: "Osmanien Mesopotamia", hist: "Alue on osa Osmanien valtakuntaa, kaukana Euroopan teollistumisen keskuksista." },
+    { name: "Irakin mandaattialue", hist: "Öljylöydöt muuttavat alueen taloutta, kun Britannia hallinnoi Irakia Kansainliiton mandaatilla." },
+    { name: "Nykyinen Irak", hist: "Muinaisen Mesopotamian perintö elää nykyisen Irakin rajojen sisällä." },
+  ],
+  egypti: [
+    { name: "Faaraoiden Egypti", hist: "Niilin tulvat ruokkivat Vanhaa, Keskistä ja Uutta valtakuntaa lähes kolmen vuosituhannen ajan." },
+    { name: "Mamlukkien ja Osmanien Egypti", hist: "Kairo on islamilaisen maailman merkittävä oppimiskeskus Al-Azharin ympärillä." },
+    { name: "Muhammad Alin uudistukset", hist: "1800-luvun modernisointi ja Suezin kanavan avaaminen 1869 yhdistävät Egyptin maailmankauppaan." },
+    { name: "Itsenäistyvä Egypti", hist: "Britannian vaikutusvalta väistyy, ja Egypti itsenäistyy täysin 1950-luvulla." },
+    { name: "Nykyinen Egypti", hist: "Yksi arabimaailman väkirikkaimmista valtioista, edelleen riippuvainen Niilistä." },
+  ],
+  indus: [
+    { name: "Harappan kaupunkikulttuuri", hist: "Mohenjo-daro ja Harappa rakentavat maailman ensimmäiset suunnitellut viemäriverkostot." },
+    { name: "Delhin sulttaanikunta ja Mogulit", hist: "Sama alue nousee myöhemmin Mogulien loistokkaaksi valtakunnaksi, joka rakentaa muun muassa Taj Mahalin." },
+    { name: "Brittiläinen Intia", hist: "Itä-Intian kauppakomppania ja myöhemmin Britannian kruunu hallitsevat aluetta teollistumisen aikana." },
+    { name: "Itsenäistyminen 1947", hist: "Intian niemimaa itsenäistyy ja jakautuu Intiaksi ja Pakistaniksi." },
+    { name: "Nykyinen Etelä-Aasia", hist: "Induksen laakso sijaitsee nykyään Pakistanissa, yhdellä maailman väkirikkaimmista alueista." },
+  ],
+  kiina: [
+    { name: "Zhou-, Qin- ja Han-dynastiat", hist: "Kirjoitusmerkit, paperi ja keskitetty virkamieshallinto kehittyvät perättäisten dynastioiden alla." },
+    { name: "Ming- ja Qing-dynastiat", hist: "Kiina on pitkään maailman suurimpia talouksia, mutta eristäytyy vähitellen ulkomaailmasta." },
+    { name: "Oopiumisodat ja avautuminen", hist: "Vuosien 1839–1842 oopiumisodat pakottavat Kiinan avaamaan satamansa eurooppalaiselle kaupalle." },
+    { name: "Tasavalta ja sisällissota", hist: "Keisarikunta kaatuu 1911, ja maa käy läpi mullistuksia ennen kansantasavallan syntyä 1949." },
+    { name: "Nykyinen Kiina", hist: "Maailman väkirikkain valtio ja yksi suurimmista talouksista." },
+  ],
+  kreikka: [
+    { name: "Klassinen Kreikka", hist: "Ateenan demokratia ja filosofia kukoistavat, ennen kuin alue liittyy Rooman ja myöhemmin Bysantin valtakuntaan." },
+    { name: "Osmanien Kreikka", hist: "Kreikka on osa Osmanien valtakuntaa vuosisatojen ajan ennen itsenäisyyssotaa 1821." },
+    { name: "Itsenäinen kuningaskunta", hist: "Kreikka rakentaa itsenäistä valtiotaan, kaukana Länsi-Euroopan teollistumisen tahdista." },
+    { name: "Maailmansotien Kreikka", hist: "Balkanin sodat ja maailmansodat muokkaavat rajoja ja väestöä voimakkaasti." },
+    { name: "Nykyinen Kreikka", hist: "EU-jäsen, jonka antiikin perintö tunnetaan maailmanlaajuisesti." },
+  ],
+  rooma: [
+    { name: "Tasavalta ja keisarikunta", hist: "Rooma kasvaa kaupunkivaltiosta Välimeren imperiumiksi; lännen osa hajoaa 476, mutta Bysantti jatkaa Konstantinopolista." },
+    { name: "Italian kaupunkivaltiot", hist: "Venetsian ja Firenzen kaltaiset kauppatasavallat nousevat, samalla kun Bysantti säilyy roomalaisena keisarikuntana vuoteen 1453 asti." },
+    { name: "Italian yhdistyminen", hist: "Italian niemimaan pikkuvaltiot yhdistyvät yhdeksi kuningaskunnaksi vuonna 1861." },
+    { name: "Maailmansotien Italia", hist: "Nopea teollistuminen ja poliittinen mullistus leimaavat 1900-luvun alkua." },
+    { name: "Nykyinen Italia", hist: "Rooman perintö elää EU:n perustajajäsenessä Italiassa." },
+  ],
+  persia: [
+    { name: "Akhaimenidien ja Sassanidien valtakunta", hist: "Kuninkaan tie yhdistää valtavan alueen; islamilainen valloitus päättää Sassanidien vallan 651." },
+    { name: "Safavidien Persia", hist: "Safavidien dynastia tekee shiialaisuudesta valtionuskonnon ja rakentaa Isfahanista loistokaupungin." },
+    { name: "Kadžaari-dynastia", hist: "Persia säilyy muodollisesti itsenäisenä, mutta Britannia ja Venäjä kilpailevat sen vaikutuspiiristä." },
+    { name: "Pahlavi-Iran", hist: "Öljyteollisuus ja modernisointipyrkimykset muuttavat maata voimakkaasti." },
+    { name: "Nykyinen Iran", hist: "Islamilainen tasavalta vuodesta 1979, yksi alueen keskeisistä valtioista." },
+  ],
+  maya: [
+    { name: "Klassinen Maya", hist: "Kaupunkivaltiot kuten Tikal ja Copán kukoistavat tähtitieteen ja kalenterin taitajina ennen klassisen kauden hiipumista noin 900." },
+    { name: "Jälkiklassinen Maya", hist: "Pohjoisen Yukatanin kaupungit elävät pidempään, kunnes espanjalaiset valloittavat viimeisen itsenäisen Maya-valtakunnan 1697." },
+    { name: "Siirtomaa-ajan perintö", hist: "Maya-kansat elävät espanjalaisen ja myöhemmin itsenäistyneiden Keski-Amerikan valtioiden alaisuudessa." },
+    { name: "1900-luvun Keski-Amerikka", hist: "Alue käy läpi voimakasta yhteiskunnallista muutosta ja levottomuuksia." },
+    { name: "Nykyinen Maya-alue", hist: "Miljoonat mayankieliset ihmiset elävät nykyään Guatemalassa ja Meksikossa." },
+  ],
+  inka: [
+    { name: "Andien varhaiset kulttuurit", hist: "Andien pengerviljelmät ja varastointitaito kehittyvät vuosisatojen ajan ennen Inka-valtakunnan nopeaa nousua 1400-luvulla." },
+    { name: "Inka-valtakunta ja valloitus", hist: "Tawantinsuyu kasvaa Etelä-Amerikan suurimmaksi valtakunnaksi, kunnes espanjalaiset kukistavat sen 1533." },
+    { name: "Siirtomaavallan perintö", hist: "Andien alue on osa Espanjan siirtokuntaa, myöhemmin itsenäistyviä Andien valtioita." },
+    { name: "1900-luvun Andit", hist: "Peru ja naapurimaat rakentavat kansallisvaltioitaan voimakkaan yhteiskunnallisen eriarvoisuuden keskellä." },
+    { name: "Nykyiset Andien valtiot", hist: "Inkojen kiviarkkitehtuuri, kuten Machu Picchu, on nykyään maailmanperintökohde." },
+  ],
+  atsteekit: [
+    { name: "Varhainen Meksikonlaakso", hist: "Järven ympärille rakennetut kaupunkivaltiot kilpailevat, ennen kuin Atsteekkien liitto nousee valtaan 1400-luvulla." },
+    { name: "Atsteekkivaltakunta ja valloitus", hist: "Tenochtitlanin chinampa-viljelmät ruokkivat suurkaupunkia, kunnes Hernán Cortés kukistaa valtakunnan 1521." },
+    { name: "Uusi-Espanja", hist: "Alueesta tulee Espanjan siirtokunnan ydin, ja Mexico Cityn väestö sekoittuu voimakkaasti." },
+    { name: "Itsenäinen Meksiko", hist: "Meksiko käy läpi vallankumouksia ja rajakiistoja 1800–1900-luvuilla." },
+    { name: "Nykyinen Meksiko", hist: "Yksi Latinalaisen Amerikan suurimmista talouksista, atsteekkiperintö näkyy edelleen kulttuurissa." },
+  ],
+  intia: [
+    { name: "Maurya- ja Gupta-valtakunnat", hist: "Nolla ja kymmenjärjestelmä kehittyvät, ja Gangesin tasanko ruokkii suuria valtakuntia." },
+    { name: "Delhin sulttaanikunta ja Mogulit", hist: "Islamilainen ja hindulainen kulttuuri sekoittuvat Mogulien loistokkaassa valtakunnassa." },
+    { name: "Brittiläinen Raj", hist: "Itä-Intian kauppakomppania ja myöhemmin Britannian kruunu hallitsevat niemimaata." },
+    { name: "Itsenäistyminen 1947", hist: "Intia ja Pakistan itsenäistyvät ja jakautuvat väkivaltaisesti." },
+    { name: "Nykyinen Intia", hist: "Maailman väkirikkain demokratia ja yksi nopeimmin kasvavista talouksista." },
+  ],
+  japani: [
+    { name: "Yamato, Heian ja Kamakura", hist: "Keisarihovin Heian-kulttuurista siirrytään samuraiden hallitsemaan Kamakuran ja Muromachin aikaan." },
+    { name: "Edo-kausi", hist: "Tokugawa-shogunaatti eristää Japanin suurelta osin ulkomaailmasta yli kahdeksi vuosisadaksi." },
+    { name: "Meiji-restauraatio", hist: "Vuoden 1868 Meiji-restauraatio käynnistää salamannopean modernisoinnin ja teollistumisen." },
+    { name: "Sotia edeltävä ja jälkeinen Japani", hist: "Nopea teollistuminen johtaa sotilaalliseen laajentumiseen ja sittemmin sodanjälkeiseen jälleenrakennukseen." },
+    { name: "Nykyinen Japani", hist: "Yksi maailman johtavista teknologiatalouksista." },
+  ],
+  khmer: [
+    { name: "Chenlan ja varhaisen Angkorin kausi", hist: "Mekongin ja Tonle Sapin alueen kulttuurit kehittävät kastelutekniikkaa ennen Angkorin valtakunnan nousua noin 800." },
+    { name: "Angkorin loisto ja hiipuminen", hist: "Angkor Wat rakennetaan 1100-luvulla, mutta valtakunta heikkenee ja Angkor hylätään pääosin 1431." },
+    { name: "Ranskan Indokiina", hist: "Kambodžasta tulee osa Ranskan siirtomaa-aluetta vuonna 1863." },
+    { name: "Itsenäistyminen ja levottomuudet", hist: "Kambodža itsenäistyy 1953, mutta kokee sittemmin raskaita konflikteja." },
+    { name: "Nykyinen Kambodža", hist: "Angkorin temppelit ovat nykyään maailmanperintökohde ja kansallinen symboli." },
+  ],
+  bysantti: [
+    { name: "Itä-Rooman valtakunta", hist: "Konstantinopoli perustetaan 330, ja valtakunta säilyttää roomalaista hallintoa ja lääketiedettä vuosisatojen ajan." },
+    { name: "Bysantin loppuaika", hist: "Konstantinopoli kukistuu osmaneille 1453, ja alueesta tulee Osmanien valtakunnan sydän." },
+    { name: "Osmanien myöhäiskausi", hist: "Osmanien valtakunta pysyy suurvaltana, mutta jää jälkeen Euroopan teollistumisesta." },
+    { name: "Turkin tasavalta", hist: "Osmanien valtakunta hajoaa ensimmäisen maailmansodan jälkeen, ja Turkin tasavalta perustetaan 1923." },
+    { name: "Nykyinen Turkki", hist: "Kahden mantereen risteyskohta, jonka pääkaupunki Istanbul kantaa yhä Konstantinopolin perintöä." },
+  ],
+  arabia: [
+    { name: "Abbasidien kulta-aika", hist: "Bagdadin Viisauden talo kokoaa ja kehittää kreikkalaista, persialaista ja intialaista tietoa, kunnes mongolit tuhoavat kaupungin 1258." },
+    { name: "Mamlukkien ja Osmanien kausi", hist: "Islamilaisen maailman keskus siirtyy Kairoon ja myöhemmin Istanbuliin Osmanien vallan alle." },
+    { name: "Osmanien valtakunnan myöhäiskausi", hist: "Alue pysyy Osmanien hallinnassa, kaukana Euroopan teollisesta murroksesta." },
+    { name: "Öljyn ja itsenäisyyden aika", hist: "Ensimmäisen maailmansodan jälkeen alueelle syntyy uusia valtioita, ja öljy muuttaa taloutta perustavanlaatuisesti." },
+    { name: "Nykyinen Lähi-itä", hist: "Alue on edelleen maailmantalouden ja -politiikan keskeinen risteyskohta." },
+  ],
+  mali: [
+    { name: "Ghanan ja Malin valtakunnat", hist: "Kultakauppa Saharan yli rikastuttaa Länsi-Afrikan valtakuntia; Mansa Musan pyhiinvaellus 1324 tekee Malista tunnetun kaukomaillakin." },
+    { name: "Songhain valtakunta", hist: "Songhai perii Malin aseman, kunnes Marokon hyökkäys 1591 heikentää Länsi-Afrikan suurvaltoja pysyvästi." },
+    { name: "Ranskan Länsi-Afrikka", hist: "Alueesta tulee osa Ranskan siirtomaaimperiumia 1800-luvun lopulla." },
+    { name: "Itsenäistymisliike", hist: "Länsi-Afrikan siirtomaat alkavat itsenäistyä toisen maailmansodan jälkeen." },
+    { name: "Nykyinen Mali", hist: "Timbuktun historialliset käsikirjoitukset muistuttavat edelleen alueen oppineisuuden perinnöstä." },
+  ],
+  aksum: [
+    { name: "Aksumin valtakunta", hist: "Aksum käy kauppaa Rooman ja Intian kanssa ja omaksuu kristinuskon 300-luvulla, ennen valtakunnan hiipumista noin 960." },
+    { name: "Zagwen ja Salomonin dynastiat", hist: "Etiopian kristillinen kuningaskunta jatkuu ylängöillä, erillään suuresta osasta islamilaistunutta Afrikan sarvea." },
+    { name: "Itsenäisyyden puolustus", hist: "Etiopia torjuu Italian valloitusyrityksen Adwan taistelussa 1896 — harvinainen esimerkki siirtomaavallan vastustamisesta." },
+    { name: "1900-luvun Etiopia", hist: "Maa kokee sekä lyhyen italialaismiehityksen että voimakkaan modernisoinnin." },
+    { name: "Nykyinen Etiopia", hist: "Yksi harvoista Afrikan mailta, jota ei koskaan koettu pysyvästi siirtomaavallan alle." },
+  ],
+  pohjola: [
+    { name: "Rautakauden ja viikinkien Pohjola", hist: "Karu ilmasto muovaa yhteisöjä, jotka myöhemmin purjehtivat kauppaan ja ryöstöretkille viikinkiaikana (n. 793–1066)." },
+    { name: "Kalmarin unioni ja uskonpuhdistus", hist: "Pohjoismaat yhdistyvät ja hajoavat liitoiksi, ja luterilaisuudesta tulee alueen valtionuskonto 1500-luvulla." },
+    { name: "Teollistuva Pohjola", hist: "Pohjoismaat teollistuvat suhteellisen myöhään mutta nopeasti 1800-luvun lopulla." },
+    { name: "Hyvinvointivaltion rakentaminen", hist: "Sotien jälkeen alueelle rakennetaan pohjoismaista hyvinvointivaltiomallia." },
+    { name: "Nykyinen Pohjola", hist: "Pohjoismaat tunnetaan nykyään korkeasta elintasosta ja hyvinvointivaltiosta." },
+  ],
+  polynesia: [
+    { name: "Tyynenmeren asuttaminen", hist: "Taitavat purjehtijat asuttavat hajallaan olevat saaret tähtien ja merivirtojen avulla vuosituhansien kuluessa." },
+    { name: "Saariyhteisöjen eristäytynyt kausi", hist: "Pienet yhteisöt kehittävät omia hallintojärjestelmiään eristyksissä suurista maailmanmantereista." },
+    { name: "Eurooppalaisten kohtaaminen", hist: "1700–1800-luvun eurooppalaiset tutkimusmatkailijat ja lähetystyö muuttavat saarten yhteiskuntia perusteellisesti." },
+    { name: "Siirtomaa-ajan Tyynimeri", hist: "Suurvallat jakavat Tyynenmeren saaria vaikutuspiireihinsä." },
+    { name: "Nykyinen Tyynimeri", hist: "Monet saarivaltiot ovat itsenäistyneet, toiset ovat yhä osa suurempia valtioita." },
+  ],
+  eurooppa: [
+    { name: "Frankkien valtakunta", hist: "Rooman lännen hajoamisen jälkeen syntyy uusia kuningaskuntia, jotka rakentavat vähitellen omaa hallintoaan." },
+    { name: "Renessanssi ja kirjapaino", hist: "Gutenbergin kirjapaino (n. 1440) nopeuttaa tiedon leviämistä ja pohjustaa tieteellistä vallankumousta." },
+    { name: "Teollinen vallankumous", hist: "Höyrykone ja tehtaat mullistavat Englannista alkaen koko Länsi-Euroopan talouden 1800-luvulla." },
+    { name: "Maailmansotien Eurooppa", hist: "Kaksi maailmansotaa ja niiden välinen aika muokkaavat mannerta perustavanlaatuisesti." },
+    { name: "Nykyinen Länsi-Eurooppa", hist: "Euroopan unioni yhdistää entisiä vihollisia rauhanprojektiksi." },
+  ],
+};
 const MOD_DEFAULTS = { farm: 1, research: 1, birth: 1, health: 0, resilience: 1, minPop: 1, store: 1 };
 const civMods = (civ) => ({ ...MOD_DEFAULTS, ...(civ?.mods ?? {}) });
 
@@ -166,8 +325,8 @@ const GOVERNMENTS = [
   { key: "heimo", name: "Heimoneuvosto", icon: "🪶", axis: "Varhainen", desc: "Vanhimmat ja päälliköt päättävät yhdessä, kasvokkain.", minEra: 0, researchMod: 1, cohesionMod: 1.05, adminEff: 1, unrest: 0.02 },
   { key: "tyrannia", name: "Tyrannia / Itsevaltius", icon: "👑", axis: "Itsevaltainen", desc: "Yksi hallitsija, nopeat päätökset — mutta ei vastuuvelvollisuutta.", minEra: 0, researchMod: 0.95, cohesionMod: 0.85, adminEff: 1.2, unrest: 0.07 },
   { key: "oligarkia", name: "Oligarkia / Aristokratia", icon: "🏛️", axis: "Itsevaltainen", desc: "Harva eliitti hallitsee omista lähtökohdistaan käsin.", minEra: 0, researchMod: 1.0, cohesionMod: 0.95, adminEff: 1.1, unrest: 0.045 },
-  { key: "tasavalta", name: "Tasavalta", icon: "📜", axis: "Edustuksellinen", desc: "Valitut edustajat päättävät, valtaa on rajoitettu laein.", minEra: 1, reqEdu: 0.4, researchMod: 1.05, cohesionMod: 1.0, adminEff: 0.95, unrest: 0.025 },
-  { key: "demokratia", name: "Demokratia", icon: "🗳️", axis: "Kansanvalta", desc: "Kansa äänestää — hidasta, mutta legitiimiä ja vakaata.", minEra: 2, reqEdu: 0.6, reqAdmin: 0.6, researchMod: 1.15, cohesionMod: 1.1, adminEff: 0.85, unrest: 0.015 },
+  { key: "tasavalta", name: "Tasavalta", icon: "📜", axis: "Edustuksellinen", desc: "Valitut edustajat päättävät, valtaa on rajoitettu laein.", minEra: 2, reqEdu: 0.4, researchMod: 1.05, cohesionMod: 1.0, adminEff: 0.95, unrest: 0.025 },
+  { key: "demokratia", name: "Demokratia", icon: "🗳️", axis: "Kansanvalta", desc: "Kansa äänestää — hidasta, mutta legitiimiä ja vakaata.", minEra: 3, reqEdu: 0.6, reqAdmin: 0.6, researchMod: 1.15, cohesionMod: 1.1, adminEff: 0.85, unrest: 0.015 },
   { key: "teokratia", name: "Teokratia", icon: "☦️", axis: "Uskonnollinen", desc: "Papisto ja uskonnolliset lait ohjaavat yhteiskuntaa.", minEra: 0, reqCohesion: 0.8, researchMod: 0.9, cohesionMod: 1.3, adminEff: 1.05, unrest: 0.02 },
 ];
 const govByKey = (key) => GOVERNMENTS.find((g) => g.key === key) ?? GOVERNMENTS[0];
@@ -196,19 +355,19 @@ const METRICS = [
   { key: "lifeExpectancy", name: "Elinajanodote", icon: "🫀", unlockEra: 0, unit: " v", decimals: 0,
     infoTitle: "Elinajanodote", infoText: "Oikeasti elinajanodote lasketaan ikäryhmittäisistä kuolleisuusluvuista niin sanotulla elinpöytämenetelmällä (life table) — se ei ole keskimääräinen kuolinikä vaan tilastollinen ennuste sille, kuinka pitkään vastasyntynyt eläisi nykyisillä kuolleisuusluvuilla. Pelissä arvo johdetaan terveys- ja hoivakattavuudesta sekä aikakauden perustasosta.",
     scoreMax: 80, scoreFn: (v) => Math.round(Math.min(1, v / 80) * 80) },
-  { key: "employmentRate", name: "Työllisyysaste", icon: "💼", unlockEra: 1, unit: " %", decimals: 0,
+  { key: "employmentRate", name: "Työllisyysaste", icon: "💼", unlockEra: 2, unit: " %", decimals: 0,
     infoTitle: "Työllisyysaste", infoText: "Oikeasti työllisyysaste on työllisten osuus työikäisestä väestöstä (esim. Tilastokeskus laskee sen 15–64-vuotiaista). Käsite syntyi vasta palkkatyön ja teollistumisen myötä 1800-luvulla — sitä ennen 'työttömyys' ei ollut mielekäs tilastoluku. Pelissä arvo heijastaa hallinnon toimivuutta ja osaamistason riittävyyttä.",
     scoreMax: 60, scoreFn: (v) => Math.round(v * 0.6) },
-  { key: "pollution", name: "Saasteet", icon: "🏭", unlockEra: 1, unit: " idx", decimals: 0,
+  { key: "pollution", name: "Saasteet", icon: "🏭", unlockEra: 2, unit: " idx", decimals: 0,
     infoTitle: "Saasteindeksi", infoText: "Oikeasti ilmansaasteita mitataan mm. hiukkaspitoisuuksina (PM2.5), hiilidioksidipäästöinä per capita ja ilmanlaatuindekseillä. Teollistuminen 1800-luvulla toi ensimmäiset merkittävät päästöt, ja ympäristötietoisuus alkoi vasta 1900-luvun jälkipuoliskolla. Pelissä arvo nousee teollisuuteen panostettaessa ja laskee tutkimuksen (puhtaamman teknologian) myötä. Matalampi on parempi.",
     scoreMax: 50, scoreFn: (v) => Math.round((100 - Math.min(100, v)) * 0.5) },
-  { key: "gdpPerCapita", name: "BKT / asukas", icon: "💰", unlockEra: 2, unit: " yks./hlö", decimals: 0,
+  { key: "gdpPerCapita", name: "BKT / asukas", icon: "💰", unlockEra: 3, unit: " yks./hlö", decimals: 0,
     infoTitle: "Bruttokansantuote per asukas", infoText: "Oikeasti BKT lasketaan kolmella tavalla, jotka teoriassa täsmäävät: tuotantoperusteisesti (arvonlisä), tuloperusteisesti (palkat + voitot) tai menoperusteisesti (kulutus + investoinnit + vienti − tuonti). Kansantalouden tilinpito virallistui vasta 1930–40-luvuilla (Simon Kuznets, Nobel 1971). Pelissä luku on abstrakti tuotannon ja teknologian yhdistelmä, ei oikea valuutta.",
     scoreMax: 200, scoreFn: (v) => Math.round(Math.min(200, v)) },
-  { key: "crimeRate", name: "Rikollisuus", icon: "🚨", unlockEra: 2, unit: " /100 000", decimals: 0,
+  { key: "crimeRate", name: "Rikollisuus", icon: "🚨", unlockEra: 3, unit: " /100 000", decimals: 0,
     infoTitle: "Rikollisuusaste", infoText: "Oikeasti rikollisuutta mitataan ilmoitettujen rikosten määränä 100 000 asukasta kohden, mutta tilasto kärsii ilmoituskynnyksen vaihtelusta eri aikoina ja paikoissa. Systemaattinen rikostilastointi ja kriminologia tieteenalana syntyivät 1800-luvun kaupungistumisen myötä. Pelissä arvo nousee heikon hallinnon ja yhteisöllisyyden myötä. Matalampi on parempi.",
     scoreMax: 50, scoreFn: (v) => Math.round((100 - Math.min(100, v)) * 0.5) },
-  { key: "happiness", name: "Onnellisuusindeksi", icon: "😊", unlockEra: 3, unit: " /10", decimals: 1,
+  { key: "happiness", name: "Onnellisuusindeksi", icon: "😊", unlockEra: 4, unit: " /10", decimals: 1,
     infoTitle: "Onnellisuusindeksi", infoText: "Oikeasti esim. YK:n World Happiness Report perustuu kyselyihin, joissa ihmiset arvioivat oman elämänsä asteikolla 0–10, yhdistettynä selittäviin tekijöihin kuten BKT, sosiaalinen tuki ja terveys. Raportti julkaistiin ensi kertaa 2012. Pelissä indeksi yhdistää terveyden, yhteisöllisyyden, moraalin, vaurauden ja rikollisuuden yhdeksi 0–10-luvuksi.",
     scoreMax: 200, scoreFn: (v) => Math.round(v * 20) },
 ];
@@ -218,16 +377,16 @@ const METRICS = [
 // koska ne kuvaavat laadullisesti erilaisia strategioita, ei saman asian eri määrää.
 const FARM_MODES = [
   { key: "pientila", name: "Pienviljely", icon: "🌾", minEra: 0, desc: "Perinteinen, tasainen mutta vaatimaton tuotto.", mods: { feedsMult: 1, resilienceMult: 1, pollutionMult: 0.7, gdpMult: 1 } },
-  { key: "suurtila", name: "Suurtilat", icon: "🚜", minEra: 2, desc: "Koneellistetut suurtilat: enemmän satoa per viljelijä, mutta herkempi häiriöille ja kuormittaa ympäristöä enemmän.", mods: { feedsMult: 1.25, resilienceMult: 1.15, pollutionMult: 1.4, gdpMult: 1.15 } },
-  { key: "bio", name: "Bioviljely", icon: "🌱", minEra: 3, desc: "Luomumenetelmät: pienempi sato, mutta parempi kestävyys ja puhtaampi ympäristö.", mods: { feedsMult: 0.85, resilienceMult: 0.8, pollutionMult: 0.3, gdpMult: 0.95 } },
-  { key: "erikois", name: "Erikoistuotteet", icon: "🍇", minEra: 2, desc: "Kalliit erikoistuotteet (viinit, mausteet, luksustuotteet): vähemmän perusruokaa, mutta enemmän vaurautta.", mods: { feedsMult: 0.9, resilienceMult: 1.05, pollutionMult: 1.0, gdpMult: 1.35 } },
+  { key: "suurtila", name: "Suurtilat", icon: "🚜", minEra: 3, desc: "Koneellistetut suurtilat: enemmän satoa per viljelijä, mutta herkempi häiriöille ja kuormittaa ympäristöä enemmän.", mods: { feedsMult: 1.25, resilienceMult: 1.15, pollutionMult: 1.4, gdpMult: 1.15 } },
+  { key: "bio", name: "Bioviljely", icon: "🌱", minEra: 4, desc: "Luomumenetelmät: pienempi sato, mutta parempi kestävyys ja puhtaampi ympäristö.", mods: { feedsMult: 0.85, resilienceMult: 0.8, pollutionMult: 0.3, gdpMult: 0.95 } },
+  { key: "erikois", name: "Erikoistuotteet", icon: "🍇", minEra: 3, desc: "Kalliit erikoistuotteet (viinit, mausteet, luksustuotteet): vähemmän perusruokaa, mutta enemmän vaurautta.", mods: { feedsMult: 0.9, resilienceMult: 1.05, pollutionMult: 1.0, gdpMult: 1.35 } },
 ];
 const farmModeByKey = (key) => FARM_MODES.find((f) => f.key === key) ?? FARM_MODES[0];
 
 const EDU_MODES = [
   { key: "perus", name: "Peruskoulutus", icon: "📗", minEra: 0, desc: "Laaja-alainen perusopetus kaikille — tasainen, vakaa koulutuskattavuus.", mods: { eduCovMult: 1, researchMult: 1, industryEffMult: 1 } },
-  { key: "ammatillinen", name: "Ammatillinen koulutus", icon: "🔧", minEra: 1, desc: "Käytännön ammattitaitoa — parantaa tuotannon tehokkuutta, mutta ei nosta tutkimusta yhtä paljon.", mods: { eduCovMult: 0.95, researchMult: 0.9, industryEffMult: 1.2 } },
-  { key: "korkeakoulu", name: "Korkeakoulutus", icon: "🎓", minEra: 2, desc: "Yliopistot ja tutkimuslaitokset — nostaa tutkimusta merkittävästi, mutta tavoittaa pienemmän osan väestöstä.", mods: { eduCovMult: 0.85, researchMult: 1.3, industryEffMult: 0.95 } },
+  { key: "ammatillinen", name: "Ammatillinen koulutus", icon: "🔧", minEra: 2, desc: "Käytännön ammattitaitoa — parantaa tuotannon tehokkuutta, mutta ei nosta tutkimusta yhtä paljon.", mods: { eduCovMult: 0.95, researchMult: 0.9, industryEffMult: 1.2 } },
+  { key: "korkeakoulu", name: "Korkeakoulutus", icon: "🎓", minEra: 3, desc: "Yliopistot ja tutkimuslaitokset — nostaa tutkimusta merkittävästi, mutta tavoittaa pienemmän osan väestöstä.", mods: { eduCovMult: 0.85, researchMult: 1.3, industryEffMult: 0.95 } },
 ];
 const eduModeByKey = (key) => EDU_MODES.find((e) => e.key === key) ?? EDU_MODES[0];
 
@@ -271,18 +430,56 @@ const FACTS = [
   "Rooman valtakunnan akveduktit toivat kaupunkiin satoja tuhansia kuutiometrejä vettä päivässä — puhdas vesi oli antiikin tehokkain 'terveydenhuoltojärjestelmä'.",
 ];
 
+// climate-kenttä rajaa tapahtuman tiettyihin ilmastovyöhykkeisiin (ks. CIVS.climate) — jos kenttää ei ole,
+// tapahtuma on universaali ja voi osua millä tahansa sivilisaatiolla. pickEvent() suodattaa poolin tämän mukaan.
 const EVENTS = [
-  { id: "kato", name: "Katovuosi", desc: "Halla vei sadon. Ruoantuotanto −40 % tällä vuorolla.", weight: 14, foodMod: 0.6 },
+  { id: "kato", name: "Katovuosi", desc: "Halla vei sadon. Ruoantuotanto −40 % tällä vuorolla.", weight: 14, foodMod: 0.6, climate: ["cold", "temperate", "mountain", "mediterranean", "islandTemperate"] },
   { id: "hyvasato", name: "Hyvä satovuosi", desc: "Suotuisat säät. Ruoantuotanto +30 %.", weight: 14, foodMod: 1.3 },
   { id: "epidemia", name: "Epidemia", desc: "Kulkutauti leviää. Terveydenhuolto ratkaisee, moniko selviää.", weight: 12, epidemic: true },
   { id: "muutto", name: "Löytöretkeläisiä", desc: "Eristyksestä huolimatta pieni joukko liittyy yhteisöön (+3 % väestöä).", weight: 6, migration: 0.03 },
   { id: "rauha", name: "Rauhallinen kausi", desc: "Mitään erikoista ei tapahtunut. Elämä jatkuu.", weight: 24 },
   { id: "tulipalo", name: "Suurpalo", desc: "Varastot paloivat. Ruokavarasto puolittui.", weight: 8, storeMod: 0.5 },
   { id: "syntyvyys", name: "Vauvabuumi", desc: "Hyvät ajat näkyvät kehdoissa. Syntyvyys +30 % tällä vuorolla.", weight: 8, birthMod: 1.3 },
+
+  // ---- Ilmastosidonnaiset tapahtumat (20 kpl) ----
+  // Aavikko/arid: Sumer, Egypti, Persia, Arabien kulta-aika, Mali
+  { id: "kuivuus", name: "Kuivuus", desc: "Sateet jäivät saapumatta kuukausiksi. Kastelukanavatkin ehtyivät.", weight: 12, foodMod: 0.55, climate: ["arid"] },
+  { id: "karavaanikauppa", name: "Karavaanikauppa kukoistaa", desc: "Aavikon poikki kulkevat karavaanit toivat vaurautta ja uusia tuotteita.", weight: 6, bonusResearch: 100, climate: ["arid"] },
+
+  // Trooppinen/tropical (Maya) ja monsuuni/monsoon (Induslaakso, Intia, Khmer): tulvat ja hirmumyrskyt
+  { id: "tulva", name: "Tulva", desc: "Rankkasateet paisuttivat joet yli äyräidensä ja upottivat pellot.", weight: 10, foodMod: 0.6, climate: ["tropical", "monsoon"] },
+  { id: "hirmumyrsky", name: "Hirmumyrsky", desc: "Raju myrsky riehui rannikolla ja tuhosi satoa sekä asumuksia.", weight: 8, foodMod: 0.7, storeMod: 0.7, climate: ["tropical", "islandTropical"] },
+  { id: "musaoni_pettaa", name: "Monsuuni pettää", desc: "Odotetut sadekuurot jäivät tulematta, ja pellot kuivuivat kylvöaikaan.", weight: 10, foodMod: 0.65, climate: ["monsoon"] },
+  { id: "musaoni_runsas", name: "Runsas monsuunikausi", desc: "Sadekausi oli juuri sopiva — joet tulvivat hallitusti ja lietteet lannoittivat pellot.", weight: 8, foodMod: 1.3, climate: ["monsoon"] },
+
+  // Saaristo/vuoristo: maanjäristykset, hyökyaallot, lumivyöryt (Japani, Inkat, Atsteekit, Aksum, Polynesia)
+  { id: "maanjaristys", name: "Maanjäristys", desc: "Maa jyrisi ja rakennuksia sortui — jälleenrakennus vei voimavaroja.", weight: 7, storeMod: 0.75, climate: ["islandTemperate", "mountain"] },
+  { id: "tsunami", name: "Hyökyaalto", desc: "Valtava aalto pyyhkäisi yli rannikkokylien.", weight: 5, foodMod: 0.7, storeMod: 0.6, climate: ["islandTemperate", "islandTropical"] },
+  { id: "lumivyory", name: "Lumivyöry", desc: "Vuorilta syöksynyt lumivyöry tuhosi penkereitä ja teitä.", weight: 7, storeMod: 0.75, climate: ["mountain"] },
+
+  // Kylmä/cold ja lauhkea/temperate: talven ankaruus
+  { id: "ankara_talvi", name: "Ankara talvi", desc: "Pakkanen puri poikkeuksellisen pitkään, ja polttopuu sekä ruoka olivat tiukilla.", weight: 10, foodMod: 0.75, climate: ["cold", "temperate"] },
+  { id: "leuto_talvi", name: "Leuto talvi", desc: "Poikkeuksellisen leuto talvi säästi voimavaroja ja karjaa.", weight: 8, storeMod: 1.15, climate: ["cold", "temperate", "mediterranean"] },
+  { id: "kalarikas_vuosi", name: "Kalarikas vuosi", desc: "Meri ja järvet olivat poikkeuksellisen antoisia — kalansaalis täytti varastot.", weight: 8, foodMod: 1.25, climate: ["cold", "islandTemperate", "islandTropical"] },
+
+  // Välimeri/mediterranean: viini, tulivuoret
+  { id: "viinisato", name: "Runsas viinisato", desc: "Viiniköynnökset ja oliivipuut tuottivat ennätysmäärän — kauppa kukoisti.", weight: 8, bonusResearch: 80, storeMod: 1.1, climate: ["mediterranean"] },
+  { id: "tulivuori", name: "Tulivuoren purkaus", desc: "Tuhka peitti pellot ja pimensi taivaan viikoiksi.", weight: 5, foodMod: 0.6, climate: ["mediterranean", "mountain", "islandTropical"] },
+
+  // Useamman ilmastovyöhykkeen jakamat riskit
+  { id: "heinasirkat", name: "Heinäsirkkaparvi", desc: "Taivaan peittävä heinäsirkkaparvi söi pellot paljaiksi hetkessä.", weight: 7, foodMod: 0.5, climate: ["arid", "monsoon", "tropical"] },
+  { id: "metsapalo", name: "Metsäpalo", desc: "Kuiva kesä sytytti laajan metsäpalon lähelle asutusta.", weight: 6, storeMod: 0.8, climate: ["mediterranean", "temperate", "tropical"] },
+
+  // Universaalit yhteiskunnalliset/taloudelliset tapahtumat — voivat osua millä tahansa sivilisaatiolla
+  { id: "kauppareitti", name: "Uusi kauppareitti avautuu", desc: "Kauppiaat löysivät uuden reitin, ja tavaraa virtasi yhteisöön totuttua enemmän.", weight: 8, bonusResearch: 120 },
+  { id: "viisas_vanhin", name: "Viisas vanhin", desc: "Yhteisö sai neuvonantajan, jonka kokemus nopeutti oppimista.", weight: 6, bonusResearch: 150 },
+  { id: "rosvojoukko", name: "Rosvojoukon hyökkäys", desc: "Aseistautunut joukko ryösti varastoja ennen pakenemistaan.", weight: 7, storeMod: 0.8 },
+  { id: "juhlavuosi", name: "Suuri juhlavuosi", desc: "Yhteisö vietti näyttäviä juhlia, jotka lujittivat yhteishenkeä.", weight: 8, birthMod: 1.15 },
 ];
 
-function pickEvent(extra) {
-  const pool = extra && extra.length ? EVENTS.concat(extra) : EVENTS;
+function pickEvent(extra, climate) {
+  const climateEvents = EVENTS.filter((e) => !e.climate || (climate && e.climate.includes(climate)));
+  const pool = extra && extra.length ? climateEvents.concat(extra) : climateEvents;
   const total = pool.reduce((s, e) => s + e.weight, 0);
   let r = Math.random() * total;
   for (const e of pool) { r -= e.weight; if (r <= 0) return e; }
@@ -294,9 +491,11 @@ function pickEvent(extra) {
 // tai indeksejä, jotta käännös löytyy T()-apufunktioilla ilman pelilogiikan muuttamista.
 const I18N = {
   en: {
-    storyLabels: ["The elders tell", "The paper writes", "The report states", "Online it's said"],
+    storyLabels: ["The elders tell", "The chronicle tells", "The paper writes", "The report states", "Online it's said"],
     eras: [
-      { name: "Agrarian", desc: "Horse and plow. Almost everyone must farm so that everyone eats.", hist: "Corresponds to Europe before the 1800s: about 75–90% of the workforce toiled in the fields.",
+      { name: "Antiquity", desc: "Wooden plow and fields turned by hand. Almost everyone must farm so that everyone eats.", hist: "Corresponds to the age from the invention of writing to roughly 1450: most of the world's population lived this way the whole time — a civilization never changes era on a fixed calendar date, but whenever its research and population are sufficient.",
+        roles: { children: "Herded livestock, carried water, scared birds off the fields, and looked after younger siblings from age 5–6 — genuine child labor.", youth: "Entered full-time work around age 12–14: plowing, sowing, tending livestock.", elderly: "Did not retire in any formal sense: they minded grandchildren, spun wool, repaired tools, and passed on experience." } },
+      { name: "Middle Ages", desc: "Heavy plow, crop rotation and the watermill raise yields — and new crops slowly find their way from one continent to another.", hist: "Corresponds roughly to 1450–1800: trade networks and empires grew more tightly connected, and crops such as the potato and maize spread into Eurasia, reshaping food supply in places. The boundary is approximate, not fixed — civilizations pass through it at very different paces.",
         roles: { children: "Herded livestock, carried water, scared birds off the fields, and looked after younger siblings from age 5–6 — genuine child labor.", youth: "Entered full-time work around age 12–14: plowing, sowing, tending livestock.", elderly: "Did not retire in any formal sense: they minded grandchildren, spun wool, repaired tools, and passed on experience." } },
       { name: "Early Industrial", desc: "Steam, the mill, and crop rotation. One farmer feeds six.", hist: "Corresponds to the mid-1800s: by 1851 only 28% of England's workforce was in agriculture.",
         roles: { children: "Many children already worked in factories or mines before protective laws; some stayed on with farm chores.", youth: "Apprenticeships and factory work became common; migration from the countryside to cities began.", elderly: "Formal pensions barely existed — the elderly lived with family and did lighter housework as long as they could." } },
@@ -306,10 +505,14 @@ const I18N = {
         roles: { children: "Education and hobbies — child labor is banned and rare.", youth: "A long education path, entry into working life comes later.", elderly: "Formal retirement is the norm; informal childcare help continues, but on a smaller scale relative to the population." } },
     ],
     inventions: [
-      [ { name: "The plow", desc: "a wooden plow multiplies a single farmer's productivity." },
+      [ { name: "The wheel", desc: "transport and pottery-making become far easier." },
+        { name: "Bronze", desc: "copper alloyed with tin makes tools and weapons more durable." },
+        { name: "Irrigation canals", desc: "channeling water to the fields makes farming possible even in drier regions." },
+        { name: "Writing", desc: "record-keeping of stores and taxes becomes far easier." } ],
+      [ { name: "The heavy plow", desc: "an iron blade and wheels turn even heavy clay soil efficiently." },
         { name: "Crop rotation", desc: "letting land rest in turns keeps harvests steadier." },
         { name: "The watermill", desc: "flowing water grinds grain — saving muscle power for other work." },
-        { name: "Writing", desc: "record-keeping of stores and taxes becomes far easier." } ],
+        { name: "The magnetic compass", desc: "navigating the open sea opens new trade routes and long voyages." } ],
       [ { name: "The steam engine", desc: "mechanical power replaces muscle power at scale for the first time." },
         { name: "The railway", desc: "goods and people move faster than ever before." },
         { name: "Vaccination", desc: "a method developed against smallpox saves thousands." },
@@ -417,6 +620,26 @@ const I18N = {
       teollinen_gb: { name: "Industrial Revolution Pioneer", desc: "The steam engine and factories transform society first, ahead of the world." },
       imperiumi_gb: { name: "Empire and World Trade", desc: "A vast empire brings resources and markets from every continent." },
       sodat_gb: { name: "The World Wars", desc: "Two world wars strain the economy and food supply heavily." },
+      kuivuus: { name: "Drought", desc: "The rains failed to come for months. Even the irrigation canals ran dry." },
+      karavaanikauppa: { name: "Caravan Trade Flourishes", desc: "Caravans crossing the desert brought wealth and new goods." },
+      tulva: { name: "Flood", desc: "Torrential rains swelled the rivers over their banks and drowned the fields." },
+      hirmumyrsky: { name: "Hurricane", desc: "A violent storm battered the coast, destroying crops and homes." },
+      musaoni_pettaa: { name: "The Monsoon Fails", desc: "The expected rains never came, and the fields dried out at sowing time." },
+      musaoni_runsas: { name: "A Bountiful Monsoon", desc: "The rainy season was just right — the rivers flooded gently and enriched the fields." },
+      maanjaristys: { name: "Earthquake", desc: "The ground shook and buildings collapsed — rebuilding drained resources." },
+      tsunami: { name: "Tsunami", desc: "A massive wave swept over the coastal villages." },
+      lumivyory: { name: "Avalanche", desc: "An avalanche off the mountains destroyed terraces and roads." },
+      ankara_talvi: { name: "Harsh Winter", desc: "The frost bit unusually long, and firewood and food ran short." },
+      leuto_talvi: { name: "Mild Winter", desc: "An unusually mild winter spared resources and livestock." },
+      kalarikas_vuosi: { name: "A Bountiful Fishing Year", desc: "The sea and lakes were unusually generous — the catch filled the stores." },
+      viinisato: { name: "Bountiful Wine Harvest", desc: "The vines and olive trees yielded a record amount — trade flourished." },
+      tulivuori: { name: "Volcanic Eruption", desc: "Ash blanketed the fields and darkened the sky for weeks." },
+      heinasirkat: { name: "Locust Swarm", desc: "A sky-darkening swarm of locusts stripped the fields bare in an instant." },
+      metsapalo: { name: "Wildfire", desc: "A dry summer sparked a large wildfire near the settlement." },
+      kauppareitti: { name: "A New Trade Route Opens", desc: "Merchants found a new route, and goods flowed into the community as never before." },
+      viisas_vanhin: { name: "A Wise Elder", desc: "The community gained an advisor whose experience sped up learning." },
+      rosvojoukko: { name: "Bandit Raid", desc: "An armed band looted the stores before fleeing." },
+      juhlavuosi: { name: "A Great Festival Year", desc: "The community held lavish celebrations that strengthened its shared spirit." },
     },
     nations: {
       suomi: { name: "Finland", trait: "Sisu and the welfare state" },
@@ -454,9 +677,11 @@ const I18N = {
     },
   },
   da: {
-    storyLabels: ["De gamle fortæller", "Avisen skriver", "Rapporten fastslår", "Online lyder det"],
+    storyLabels: ["De gamle fortæller", "Krøniken beretter", "Avisen skriver", "Rapporten fastslår", "Online lyder det"],
     eras: [
-      { name: "Landbrugssamfund", desc: "Hest og plov. Næsten alle skal dyrke jorden, for at alle kan spise.", hist: "Svarer til Europa før 1800-tallet: omkring 75–90% af arbejdsstyrken slæbte på markerne.",
+      { name: "Oldtiden", desc: "Træplov og marker pløjet med håndkraft. Næsten alle skal dyrke jorden, for at alle kan spise.", hist: "Svarer til tiden fra skriftens opfindelse til omkring 1450: størstedelen af verdens befolkning levede sådan hele denne tid — en civilisation skifter aldrig tidsalder på en fast kalenderdato, men når dens forskning og befolkning er tilstrækkelig.",
+        roles: { children: "Vogtede kvæg, bar vand, skræmte fugle væk fra markerne og passede yngre søskende fra 5–6-årsalderen — ægte børnearbejde.", youth: "Gik ind i fuldt arbejde omkring 12–14-årsalderen: pløjning, såning, kvægpasning.", elderly: "Gik ikke på formel pension: de passede børnebørn, spandt garn, reparerede redskaber og videregav erfaring." } },
+      { name: "Middelalder", desc: "Tung plov, vekseldrift og vandmølle øger udbyttet — og nye afgrøder finder langsomt vej fra det ene kontinent til det andet.", hist: "Svarer groft til 1450–1800: handelsnetværk og imperier blev tættere forbundet, og afgrøder som kartoflen og majs spredte sig til Eurasien og ændrede fødevareforsyningen visse steder. Grænsen er vejledende, ikke fast — civilisationer bevæger sig igennem den i vidt forskelligt tempo.",
         roles: { children: "Vogtede kvæg, bar vand, skræmte fugle væk fra markerne og passede yngre søskende fra 5–6-årsalderen — ægte børnearbejde.", youth: "Gik ind i fuldt arbejde omkring 12–14-årsalderen: pløjning, såning, kvægpasning.", elderly: "Gik ikke på formel pension: de passede børnebørn, spandt garn, reparerede redskaber og videregav erfaring." } },
       { name: "Tidlig industriel", desc: "Damp, mølle og vekseldrift. Én landmand mætter seks.", hist: "Svarer til midten af 1800-tallet: i England var kun 28% af arbejdsstyrken i landbruget i 1851.",
         roles: { children: "Mange børn arbejdede allerede på fabrikker eller i miner før beskyttelseslove; nogle blev ved gårdens gøremål.", youth: "Lærlingearbejde og fabriksarbejde blev almindeligt; udvandring fra landet til byerne begyndte.", elderly: "Der var næppe formel pension — de ældre boede hos familien og lavede lettere husligt arbejde, så længe de kunne." } },
@@ -466,10 +691,14 @@ const I18N = {
         roles: { children: "Uddannelse og fritidsinteresser — børnearbejde er forbudt og sjældent.", youth: "Lang uddannelsesvej, senere indtræden i arbejdslivet.", elderly: "Formel pension er normen; uformel børnepasningshjælp fortsætter, men i mindre omfang set i forhold til befolkningen." } },
     ],
     inventions: [
-      [ { name: "Ploven", desc: "en træplov mangedobler en enkelt landmands produktivitet." },
+      [ { name: "Hjulet", desc: "transport og lerkarsfremstilling bliver markant lettere." },
+        { name: "Bronze", desc: "kobber legeret med tin gør redskaber og våben mere holdbare." },
+        { name: "Kunstvanding", desc: "at lede vand til markerne gør landbrug muligt selv i tørrere egne." },
+        { name: "Skriften", desc: "regnskab over lagre og skatter bliver markant lettere." } ],
+      [ { name: "Den tunge plov", desc: "et jernblad og hjul vender selv tung lerjord effektivt." },
         { name: "Vekseldrift", desc: "at lade jorden hvile på skift giver jævnere høst." },
         { name: "Vandmøllen", desc: "rindende vand maler kornet — det sparer muskelkraft til andet arbejde." },
-        { name: "Skriften", desc: "regnskab over lagre og skatter bliver markant lettere." } ],
+        { name: "Kompasset", desc: "navigation på åbent hav åbner nye handelsruter og lange sørejser." } ],
       [ { name: "Dampmaskinen", desc: "mekanisk kraft erstatter for første gang muskelkraft i stor skala." },
         { name: "Jernbanen", desc: "gods og mennesker bevæger sig hurtigere end nogensinde før." },
         { name: "Vaccination", desc: "en metode udviklet mod kopper redder tusindvis." },
@@ -577,6 +806,26 @@ const I18N = {
       teollinen_gb: { name: "Foregangsland i den industrielle revolution", desc: "Dampmaskinen og fabrikkerne forandrer hele samfundet som det første i verden." },
       imperiumi_gb: { name: "Imperium og verdenshandel", desc: "Et stort imperium bringer ressourcer og markeder fra alle kontinenter." },
       sodat_gb: { name: "Verdenskrigene", desc: "To verdenskrige belaster økonomien og fødevareforsyningen tungt." },
+      kuivuus: { name: "Tørke", desc: "Regnen udeblev i månedsvis. Selv kunstvandingskanalerne tørrede ud." },
+      karavaanikauppa: { name: "Karavanehandlen blomstrer", desc: "Karavaner på tværs af ørkenen bragte velstand og nye varer." },
+      tulva: { name: "Oversvømmelse", desc: "Skybrud fik floderne til at gå over deres bredder og oversvømmede markerne." },
+      hirmumyrsky: { name: "Orkan", desc: "En voldsom storm hærgede kysten og ødelagde afgrøder og boliger." },
+      musaoni_pettaa: { name: "Monsunen udebliver", desc: "Den forventede regn kom aldrig, og markerne tørrede ud ved såtid." },
+      musaoni_runsas: { name: "En rig monsunsæson", desc: "Regntiden var netop passende — floderne oversvømmede kontrolleret og gødede markerne." },
+      maanjaristys: { name: "Jordskælv", desc: "Jorden rystede, og bygninger styrtede sammen — genopbygningen krævede kræfter." },
+      tsunami: { name: "Tsunami", desc: "En enorm bølge skyllede hen over kystlandsbyerne." },
+      lumivyory: { name: "Lavine", desc: "En lavine fra bjergene ødelagde terrasser og veje." },
+      ankara_talvi: { name: "Streng vinter", desc: "Frosten bed usædvanligt længe, og brænde og mad blev knapt." },
+      leuto_talvi: { name: "Mild vinter", desc: "En usædvanligt mild vinter sparede ressourcer og kvæg." },
+      kalarikas_vuosi: { name: "Et fiskerigt år", desc: "Havet og søerne var usædvanligt givtige — fangsten fyldte lagrene." },
+      viinisato: { name: "Rig vinhøst", desc: "Vinstokke og oliventræer gav en rekordstor høst — handlen blomstrede." },
+      tulivuori: { name: "Vulkanudbrud", desc: "Aske dækkede markerne og formørkede himlen i ugevis." },
+      heinasirkat: { name: "Græshoppesværm", desc: "En himmelmørkende græshoppesværm åd markerne bare på et øjeblik." },
+      metsapalo: { name: "Skovbrand", desc: "En tør sommer antændte en stor skovbrand nær bebyggelsen." },
+      kauppareitti: { name: "En ny handelsrute åbner", desc: "Købmænd fandt en ny rute, og varer strømmede ind i samfundet som aldrig før." },
+      viisas_vanhin: { name: "En klog ældste", desc: "Samfundet fik en rådgiver, hvis erfaring fremskyndede læringen." },
+      rosvojoukko: { name: "Røverbande angriber", desc: "En bevæbnet flok plyndrede lagrene, før den flygtede." },
+      juhlavuosi: { name: "Et stort festår", desc: "Samfundet holdt overdådige fester, der styrkede fællesskabsfølelsen." },
     },
     nations: {
       suomi: { name: "Finland", trait: "Sisu og velfærdsstaten" },
@@ -631,6 +880,18 @@ function T(lang, table, key, field, fb) {
 function TE(lang, eraIdx, field, fb) {
   return I18N[lang] && I18N[lang].eras && I18N[lang].eras[eraIdx] && I18N[lang].eras[eraIdx][field] !== undefined
     ? I18N[lang].eras[eraIdx][field] : fb;
+}
+// Sivilisaatiokohtainen aikakausinimi/-historia: käyttää civEras-käännöstä jos sellainen on olemassa,
+// muuten suomenkielistä CIV_ERA_TEXT-sisältöä (jos lang==fi), muuten palaa geneeriseen fb-arvoon
+// (joka on jo TE():n kautta haettu ja siis oikein käännetty geneerinen aikakausiteksti).
+function CE(lang, civKey, eraIdx, field, fb) {
+  if (I18N[lang] && I18N[lang].civEras && I18N[lang].civEras[civKey] && I18N[lang].civEras[civKey][eraIdx] && I18N[lang].civEras[civKey][eraIdx][field] !== undefined) {
+    return I18N[lang].civEras[civKey][eraIdx][field];
+  }
+  if (lang === "fi" && civKey && CIV_ERA_TEXT[civKey] && CIV_ERA_TEXT[civKey][eraIdx] && CIV_ERA_TEXT[civKey][eraIdx][field] !== undefined) {
+    return CIV_ERA_TEXT[civKey][eraIdx][field];
+  }
+  return fb;
 }
 function TRole(lang, eraIdx, roleKey, fb) {
   return I18N[lang] && I18N[lang].eras && I18N[lang].eras[eraIdx] && I18N[lang].eras[eraIdx].roles && I18N[lang].eras[eraIdx].roles[roleKey] !== undefined
@@ -769,6 +1030,7 @@ const UI_STRINGS = {
     professionsTitle: "Ammattijakauma",
     outsideWorkforce: "Työvoiman ulkopuolella (lapset & vanhukset)",
     eraBackground: "Aikakauden tausta",
+    eraTransitionNote: "Aikakausi ei vaihdu tiettynä pelivuotena — se vaihtuu, kun tutkimuksesi ja väestösi riittävät. Sama aikakausi voi kestää hyvin eri pituisen ajan eri läpipeluissa ja eri sivilisaatioilla.",
     nextTurnBtn: "Etene 5 vuotta →",
     populationChartTitle: "Väestökehitys",
     logTitle: "Aikakirjat",
@@ -909,6 +1171,7 @@ const UI_STRINGS = {
     professionsTitle: "Occupational breakdown",
     outsideWorkforce: "Outside the workforce (children & elderly)",
     eraBackground: "Era background",
+    eraTransitionNote: "An era doesn't change on a fixed in-game year — it changes once your research and population are sufficient. The same era can last very different lengths across playthroughs and civilizations.",
     nextTurnBtn: "Advance 5 years →",
     populationChartTitle: "Population trend",
     logTitle: "Chronicles",
@@ -1049,6 +1312,7 @@ const UI_STRINGS = {
     professionsTitle: "Erhvervsfordeling",
     outsideWorkforce: "Uden for arbejdsstyrken (børn & ældre)",
     eraBackground: "Tidsalderens baggrund",
+    eraTransitionNote: "En tidsalder skifter ikke på et bestemt spilår — den skifter, når din forskning og befolkning er tilstrækkelig. Samme tidsalder kan vare meget forskelligt fra spil til spil og civilisation til civilisation.",
     nextTurnBtn: "Ryk 5 år frem →",
     populationChartTitle: "Befolkningsudvikling",
     logTitle: "Krøniker",
@@ -1101,6 +1365,7 @@ const STORY_TEXT = {
       `Kehdoissa: ${births} lasta syntyi. Haudoilla: ${totalDeaths} saatettiin viimeiselle matkalle (${childDeaths} lasta, ${workerDeaths} työikäistä, ${elderDeaths} vanhusta).`,
     retirementPhrase: [
       (retired) => `${retired} vanhinta siirtyi kevyempiin askareisiin ja lastenlasten hoitoon — muodollista eläkettä ei tunnettu.`,
+      (retired) => `${retired} vanhinta jatkoi kylän neuvonantajina ja kevyemmissä askareissa — eläkkeelle jäämistä ei vielä tunnettu.`,
       (retired) => `${retired} vanhinta jäi perheen luo kevyempiin askareisiin; virallista eläkettä tuskin oli.`,
       (retired) => `${retired} raatajaa jäi eläkkeelle uuden eläkejärjestelmän turvin.`,
       (retired) => `${retired} työntekijää siirtyi eläkkeelle — moni jatkoi silti aktiivisena lastenhoitajana tai vapaaehtoisena.`,
@@ -1158,6 +1423,7 @@ const STORY_TEXT = {
       `In the cradles: ${births} children were born. To their graves: ${totalDeaths} were laid to rest (${childDeaths} children, ${workerDeaths} working-age, ${elderDeaths} elderly).`,
     retirementPhrase: [
       (retired) => `${retired} of the eldest moved on to lighter chores and minding grandchildren — formal retirement was unknown.`,
+      (retired) => `${retired} of the eldest carried on as village advisors and lighter chores — retirement as an institution didn't exist yet.`,
       (retired) => `${retired} of the eldest stayed with family for lighter chores; there was scarcely any formal pension.`,
       (retired) => `${retired} laborers retired under the new pension system.`,
       (retired) => `${retired} workers retired — many still stayed active as childminders or volunteers.`,
@@ -1215,6 +1481,7 @@ const STORY_TEXT = {
       `I vuggerne: ${births} børn blev født. Ved gravene: ${totalDeaths} blev ført på deres sidste rejse (${childDeaths} børn, ${workerDeaths} i den arbejdsdygtige alder, ${elderDeaths} ældre).`,
     retirementPhrase: [
       (retired) => `${retired} af de ældste gik over til lettere gøremål og pasning af børnebørn — formel pension var ukendt.`,
+      (retired) => `${retired} af de ældste fortsatte som landsbyens rådgivere og med lettere gøremål — pension som institution fandtes endnu ikke.`,
       (retired) => `${retired} af de ældste blev hos familien til lettere gøremål; der var næppe formel pension.`,
       (retired) => `${retired} slidere gik på pension med det nye pensionssystem.`,
       (retired) => `${retired} arbejdere gik på pension — mange fortsatte dog aktivt som børnepassere eller frivillige.`,
@@ -1338,7 +1605,7 @@ export default function Yhteiskunta() {
 
     // Terveydenhuollon erikoistuminen (avautuu Teollisesta aikakaudesta alkaen): osa terveystyöntekijöistä
     // voi erikoistua, mikä nostaa kattavuutta enemmän per henkilö kuin yleislääkäri.
-    const specShare = s.era >= 2 ? s.specialistShare / 100 : 0;
+    const specShare = s.era >= 3 ? s.specialistShare / 100 : 0;
     const generalists = medics * (1 - specShare);
     const specialists = medics * specShare;
     const healthCov = Math.min(1.15, Math.max(0, (generalists + specialists * 1.4) / Math.max(1, pop * 0.018) + M.health));
@@ -1354,30 +1621,30 @@ export default function Yhteiskunta() {
     const morale = Math.min(1.1, w("arts") / Math.max(1, pop * 0.005));
     // Rikostutkijat (avautuu Teollisesta): osa hallinnosta erikoistuu rikostutkintaan — vähentää hieman
     // yleistä hallintokattavuutta, mutta laskee rikollisuutta suoraan (ks. Yhteiskuntamittarit).
-    const detectiveFrac = s.era >= 2 ? s.detectiveShare / 100 : 0;
+    const detectiveFrac = s.era >= 3 ? s.detectiveShare / 100 : 0;
     const adminCov = Math.min(1.1, (w("admin") / Math.max(1, pop * 0.015)) * gov.adminEff * (1 - 0.15 * detectiveFrac));
     const careCov = Math.min(1.1, w("services") / Math.max(1, pop * 0.03) + elderlyCareBoost);
     // Tutkimuksen erikoistuminen (avautuu Varhaisteollisesta): soveltava tutkimus nostaa
     // tuotannon tehokkuutta heti, perustutkimus kasvattaa tutkimuspisteitä nopeammin pitkällä aikavälillä.
-    const appliedFrac = s.era >= 1 ? s.appliedShare / 100 : 0;
+    const appliedFrac = s.era >= 2 ? s.appliedShare / 100 : 0;
     // Teollisuuden suuntaus (avautuu Varhaisteollisesta): erikoistunut teollisuus nostaa tehokkuutta ja
     // BKT:ta, mutta saastuttaa enemmän kuin perustuotanto.
-    const industryFrac = s.era >= 1 ? s.industryFocus / 100 : 0;
+    const industryFrac = s.era >= 2 ? s.industryFocus / 100 : 0;
     const efficiency = (0.85 + 0.15 * Math.min(1, adminCov)) * (0.92 + 0.08 * Math.min(1, morale)) * (1 + 0.12 * appliedFrac) * eduMode.mods.industryEffMult * (1 + 0.08 * industryFrac);
     const foodProd = farmers * era.feeds * skillPenalty * M.farm * efficiency * farmMode.mods.feedsMult;
     // Ehkäisevä vs sairaalapainotteinen terveydenhuolto (avautuu Varhaisteollisesta)
-    const preventiveFrac = s.era >= 1 ? 1 - s.healthFocus / 100 : 0.5;
+    const preventiveFrac = s.era >= 2 ? 1 - s.healthFocus / 100 : 0.5;
 
     // Keski-ikä (karkea arvio ikäryhmien oletetusta keski-iästä) ja huoltosuhde
     const avgAge = (s.children * 7 + s.workers * 37 + s.elderly * 74) / Math.max(1, pop);
     const depRatio = s.workers > 0 ? ((s.children + s.elderly) / s.workers) * 100 : 0;
 
     // ---- Yhteiskuntamittarit: oikeita indikaattoreita mukailevat luvut sisäisistä muuttujista ----
-    const lifeBase = [32, 42, 58, 78][s.era];
+    const lifeBase = [32, 36, 42, 58, 78][s.era];
     const lifeExpectancy = Math.max(20, Math.min(90, lifeBase + (healthCov - 0.7) * 35 + (careCov - 0.5) * 10));
     const employmentRate = Math.max(0, Math.min(100, Math.round(100 * (0.8 + 0.2 * Math.min(1, adminCov)) * skillPenalty)));
     const industryShare = alloc.industry / 100;
-    const pollutionEraFactor = [0.2, 0.6, 1.0, 0.5][s.era];
+    const pollutionEraFactor = [0.2, 0.25, 0.6, 1.0, 0.5][s.era];
     const techCleanup = nextEra ? Math.min(0.4, (s.research / nextEra.research) * 0.4) : 0.4;
     const pollution = Math.max(0, Math.round(industryShare * pollutionEraFactor * 100 * (1 - techCleanup) * farmMode.mods.pollutionMult * (1 + 0.3 * industryFrac)));
     const gdpPerCapita = Math.round(50 * efficiency * (1 + s.era * 1.5) * (1 + (nextEra ? (s.research / nextEra.research) * 0.5 : 0.5)) * farmMode.mods.gdpMult * (1 + 0.2 * industryFrac));
@@ -1587,11 +1854,14 @@ export default function Yhteiskunta() {
   }
 
   // ---- Vuoron simulointi (5 vuotta) ----
-  function nextTurn() {
+  function nextTurn(turnYears = 5) {
     setS((prev) => {
       if (prev.gameOver || !prev.civ) return prev;
       const lang = prev.lang || "fi";
       const ST = STORY_TEXT[lang] || STORY_TEXT.fi;
+      // Osa vaikutuksista skaalataan vuorolle kuluvien vuosien mukaan (perusarvot mitoitettu 5 vuoden jaksolle);
+      // yksittäiset tapahtumat (epidemia, levottomuudet, muutto, hallinnon rapautuminen) pysyvät vuoron pituudesta riippumattomina.
+      const timeScale = turnYears / 5;
       const C = combinedMods(prev.civ, prev.nation, prev.startSkills);
       const a = prev.alloc;
       const total = Object.values(a).reduce((x, y) => x + y, 0);
@@ -1603,7 +1873,8 @@ export default function Yhteiskunta() {
       const G = govByKey(govKey);
       const eMinPop = Math.round(E.minPop * C.minPop);
       const nationEvents = prev.nation?.events;
-      const ev = pickEvent(nationEvents);
+      const civClimate = prev.civ.climate;
+      const ev = pickEvent(nationEvents, civClimate);
       const log = [];
 
       const skillPenalty = popNow < eMinPop ? Math.max(0.5, popNow / eMinPop) : 1;
@@ -1612,7 +1883,7 @@ export default function Yhteiskunta() {
       const farmMode = farmModeByKey(farmModeKey);
       const eduMode = eduModeByKey(eduModeKey);
       const medics = workers * norm.health;
-      const specShare = eraIdx >= 2 ? specialistShare / 100 : 0;
+      const specShare = eraIdx >= 3 ? specialistShare / 100 : 0;
       const generalists = medics * (1 - specShare);
       const specialists = medics * specShare;
       const healthCov = Math.min(1.15, Math.max(0, (generalists + specialists * 1.4) / Math.max(1, popNow * 0.018) + C.health));
@@ -1620,17 +1891,17 @@ export default function Yhteiskunta() {
       const eduCov = Math.min(1.1, (teachers / Math.max(1, children / 20)) * eduMode.mods.eduCovMult);
       const cohesion = Math.min(1.1, ((workers * norm.religion) / Math.max(1, popNow * 0.006)) * G.cohesionMod);
       const morale = Math.min(1.1, (workers * norm.arts) / Math.max(1, popNow * 0.005));
-      const detectiveFrac = eraIdx >= 2 ? detectiveShare / 100 : 0;
+      const detectiveFrac = eraIdx >= 3 ? detectiveShare / 100 : 0;
       const adminCov = Math.min(1.1, ((workers * norm.admin) / Math.max(1, popNow * 0.015)) * G.adminEff * (1 - 0.15 * detectiveFrac));
       // Vanhusten hoivapanos: he eivät jää muodolliselle eläkkeelle vaan hoitavat lapsia ja tekevät kevyempiä askareita
       const elderlyCareBoost = (elderly * E.elderCare) / Math.max(1, popNow * 0.03);
       const careCov = Math.min(1.1, (workers * norm.services) / Math.max(1, popNow * 0.03) + elderlyCareBoost);
       // Hallinto ja moraali kertautuvat kaikkeen tuotantoon; soveltava tutkimus ja erikoistunut teollisuus nostavat tehokkuutta heti
-      const appliedFrac = eraIdx >= 1 ? appliedShare / 100 : 0;
-      const industryFrac = eraIdx >= 1 ? industryFocus / 100 : 0;
+      const appliedFrac = eraIdx >= 2 ? appliedShare / 100 : 0;
+      const industryFrac = eraIdx >= 2 ? industryFocus / 100 : 0;
       const efficiency = (0.85 + 0.15 * Math.min(1, adminCov)) * (0.92 + 0.08 * Math.min(1, morale)) * (1 + 0.12 * appliedFrac) * eduMode.mods.industryEffMult * (1 + 0.08 * industryFrac);
       // Ehkäisevä vs sairaalapainotteinen terveydenhuolto: ehkäisevä suojaa lapsia paremmin, sairaalapainotteinen aikuisia/vanhuksia
-      const preventiveFrac = eraIdx >= 1 ? 1 - healthFocus / 100 : 0.5;
+      const preventiveFrac = eraIdx >= 2 ? 1 - healthFocus / 100 : 0.5;
       if (adminCov < 0.6) {
         foodStore *= 0.9;
         log.push({ text: ST.adminDecay, tone: "bad" });
@@ -1658,9 +1929,9 @@ export default function Yhteiskunta() {
       // Kuolleisuus (5 v) — resilience lieventää nälän ja epidemian vaikutusta, hoiva suojaa lapsia ja vanhuksia.
       // Ehkäisevä painotus suojaa erityisesti lapsia ja epidemioita vastaan, sairaalapainotteinen aikuisia/vanhuksia.
       const famine = (foodRatio < 1 ? (1 - foodRatio) : 0) * C.resilience * farmMode.mods.resilienceMult;
-      let childMort = E.childMort * (1.6 - 0.6 * healthCov) * (1.15 - 0.15 * Math.min(1, careCov)) * (1 - 0.15 * preventiveFrac) + famine * 0.5;
-      let workerMort = 0.02 * (1.5 - 0.5 * healthCov) + famine * 0.3;
-      let elderMort = 0.28 * (1.5 - 0.5 * healthCov) * (1.25 - 0.25 * Math.min(1, careCov)) * (1 - 0.15 * (1 - preventiveFrac)) + famine * 0.6;
+      let childMort = E.childMort * timeScale * (1.6 - 0.6 * healthCov) * (1.15 - 0.15 * Math.min(1, careCov)) * (1 - 0.15 * preventiveFrac) + famine * 0.5;
+      let workerMort = 0.02 * timeScale * (1.5 - 0.5 * healthCov) + famine * 0.3;
+      let elderMort = 0.28 * timeScale * (1.5 - 0.5 * healthCov) * (1.25 - 0.25 * Math.min(1, careCov)) * (1 - 0.15 * (1 - preventiveFrac)) + famine * 0.6;
       if (ev.epidemic) {
         const hit = 0.12 * (1.4 - healthCov) * C.resilience * (1 - 0.2 * preventiveFrac);
         childMort += hit; workerMort += hit * 0.6; elderMort += hit * 1.5;
@@ -1674,15 +1945,15 @@ export default function Yhteiskunta() {
 
       // Syntyvyys — demografinen siirtymä: varhaiset yhteiskunnat synnyttävät paljon (koska moni kuolee),
       // modernit vähän. TFR5 = syntymiä per hedelmällisessä iässä oleva nainen / 5 vuotta.
-      const TFR5 = [0.9, 0.8, 0.65, 0.5][eraIdx];
+      const TFR5 = [0.9, 0.85, 0.8, 0.65, 0.5][eraIdx];
       const fertileWomen = workers * 0.5 * 0.6;
       const birthFactor = C.birth * (0.85 + 0.25 * Math.min(1, cohesion)) * Math.min(1.1, foodRatio * 0.7 + 0.3 + foodStore / (popNow * 6)) * (ev.birthMod ?? 1);
-      const births = fertileWomen * TFR5 * birthFactor;
+      const births = fertileWomen * TFR5 * timeScale * birthFactor;
 
       // Hajaannus: ilman yhteisiä merkityksiä väkeä erkaantuu yhteisöstä
       let leaverCount = 0;
       if (cohesion < 0.5 && popNow > 500) {
-        const leavers = 0.02 * (1 - cohesion);
+        const leavers = 0.02 * timeScale * (1 - cohesion);
         leaverCount = popNow * leavers;
         children *= 1 - leavers; workers *= 1 - leavers; elderly *= 1 - leavers;
         log.push({ text: ST.leaversLog(fmt(leaverCount)), tone: "bad" });
@@ -1707,8 +1978,8 @@ export default function Yhteiskunta() {
       }
 
       // Ikääntyminen
-      const grownUp = children * 0.27;
-      const retired = workers * 0.10;
+      const grownUp = children * 0.27 * timeScale;
+      const retired = workers * 0.10 * timeScale;
 
       children = children - childDeaths - grownUp + births;
       workers = workers - workerDeaths - retired + grownUp;
@@ -1723,7 +1994,7 @@ export default function Yhteiskunta() {
       // Tutkimus — hallinto ja moraali vaikuttavat tähänkin. Soveltavaan tutkimukseen painottuminen
       // näkyy jo efficiency-kertoimessa (nopeampi tuotanto), mutta hidastaa puhtaan tutkimuspisteen kertymää.
       const researchers = workers * norm.research;
-      const researchGained = researchers * 0.15 * (0.5 + eduCov) * efficiency * C.research * G.researchMod * eduMode.mods.researchMult * (1 - 0.4 * appliedFrac) * (1 + 0.15 * industryFrac) + (ev.bonusResearch ?? 0);
+      const researchGained = researchers * 0.15 * timeScale * (0.5 + eduCov) * efficiency * C.research * G.researchMod * eduMode.mods.researchMult * (1 - 0.4 * appliedFrac) * (1 + 0.15 * industryFrac) + (ev.bonusResearch ?? 0);
       research = Math.max(0, research + researchGained);
 
       // Aikakausisiirtymä
@@ -1734,9 +2005,9 @@ export default function Yhteiskunta() {
       const nEraIdxForT = eraBeforeAdvance + 1;
       if (N && research >= N.research && children + workers + elderly >= nMinPop * 0.6) {
         eraIdx++; eraAdvanced = true;
-        log.push({ text: ST.eraAdvanceLog(TE(lang, nEraIdxForT, "name", N.name), TE(lang, nEraIdxForT, "desc", N.desc)), tone: "good" });
+        log.push({ text: ST.eraAdvanceLog(CE(lang, prev.civ.key, nEraIdxForT, "name", TE(lang, nEraIdxForT, "name", N.name)), TE(lang, nEraIdxForT, "desc", N.desc)), tone: "good" });
       } else if (N && research >= N.research) {
-        log.push({ text: ST.eraNotYetLog(TE(lang, nEraIdxForT, "name", N.name).toLowerCase(), fmt(nMinPop * 0.6)), tone: "info" });
+        log.push({ text: ST.eraNotYetLog(CE(lang, prev.civ.key, nEraIdxForT, "name", TE(lang, nEraIdxForT, "name", N.name)).toLowerCase(), fmt(nMinPop * 0.6)), tone: "info" });
       }
 
       // ===== KEKSINNÖT: tutkimuksen edistyessä paljastuu aikakaudelle ominaisia keksintöjä =====
@@ -1759,13 +2030,13 @@ export default function Yhteiskunta() {
       const inventionRevealDesc = inventionReveal ? TInv(lang, eraBeforeAdvance, inventionRevealIdx, "desc", inventionReveal.desc) : null;
 
       const newPop = children + workers + elderly;
-      const year = prev.year + 5;
+      const year = prev.year + turnYears;
       const totalDeaths = childDeaths + workerDeaths + elderDeaths;
       const educated = grownUp * Math.min(1, eduCov);
 
       // ===== VIISIVUOTISKERTOMUS: tarina siitä, mitä tapahtui =====
       const p = [];
-      const advancedEraName = TE(lang, eraIdx, "name", ERAS[eraIdx].name);
+      const advancedEraName = CE(lang, prev.civ.key, eraIdx, "name", TE(lang, eraIdx, "name", ERAS[eraIdx].name));
       // Avaus tapahtuman mukaan
       p.push((ST.openers[ev.id] ?? ST.openers.default)(prev.year, year));
       // Ruoka
@@ -1793,10 +2064,10 @@ export default function Yhteiskunta() {
       // ===== VUOSI VUODELTA: viiden vuoden päätapahtumat samaan kertomukseen =====
       // Yksi näistä (primaryOffset) on sama tapahtuma, joka oikeasti vaikutti tämän jakson laskelmiin (ev).
       // Muut neljä ovat kertomuksellista väriä sen rinnalle, ilman erillistä vaikutusta lukuihin.
-      const primaryOffset = 1 + Math.floor(Math.random() * 5);
+      const primaryOffset = 1 + Math.floor(Math.random() * turnYears);
       const years = [];
-      for (let yo = 1; yo <= 5; yo++) {
-        const ye = yo === primaryOffset ? ev : pickEvent(nationEvents);
+      for (let yo = 1; yo <= turnYears; yo++) {
+        const ye = yo === primaryOffset ? ev : pickEvent(nationEvents, civClimate);
         years.push({ year: prev.year + yo, name: T(lang, "events", ye.id, "name", ye.name), desc: T(lang, "events", ye.id, "desc", ye.desc), primary: yo === primaryOffset });
       }
 
@@ -1830,16 +2101,17 @@ export default function Yhteiskunta() {
 
       log.unshift({ text: `${evName}: ${evDesc}`, tone: ev.foodMod < 1 || ev.epidemic || ev.storeMod ? "bad" : ev.id === "rauha" ? "info" : "good" });
       if (famine > 0.02) log.push({ text: ST.famineLog(Math.round(foodRatio * 100), fmt(childDeaths + workerDeaths + elderDeaths)), tone: "bad" });
-      if (skillPenalty < 1) log.push({ text: ST.skillGapLog(TE(lang, prev.era, "name", E.name), fmt(eMinPop), Math.round(skillPenalty * 100)), tone: "bad" });
+      if (skillPenalty < 1) log.push({ text: ST.skillGapLog(CE(lang, prev.civ.key, prev.era, "name", TE(lang, prev.era, "name", E.name)), fmt(eMinPop), Math.round(skillPenalty * 100)), tone: "bad" });
 
       const civNameForEnd = T(lang, "civs", prev.civ.key, "name", prev.civ.name);
       let gameOver = null;
       if (newPop < 150) {
         gameOver = { win: false, text: ST.gameOverLose(civNameForEnd, year, fmt(newPop)) };
       } else {
-        if (eraIdx === 3 && newPop > prev.history[prev.history.length - 1].pop * 0.98) stableTurns++;
+        // stableTurns lasketaan vuosina (ei vuoroina), jotta 1 ja 5 vuoden vuorot pysyvät tasapainossa keskenään.
+        if (eraIdx === 4 && newPop > prev.history[prev.history.length - 1].pop * 0.98) stableTurns += turnYears;
         else stableTurns = 0;
-        if (stableTurns >= 3) gameOver = { win: true, text: ST.gameOverWin(year, civNameForEnd, fmt(newPop)) };
+        if (stableTurns >= 15) gameOver = { win: true, text: ST.gameOverWin(year, civNameForEnd, fmt(newPop)) };
       }
 
       const newMilestones = [];
@@ -1923,6 +2195,14 @@ export default function Yhteiskunta() {
         .btn:active{transform:scale(0.98)}
         .btn:disabled{opacity:.4;cursor:not-allowed;filter:none}
         .paper{background:#12233a;border:1px solid #2a3d57;border-radius:8px;padding:16px}
+        .action-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:rgba(201,162,39,0.07);border:1px solid #c9a22755;border-radius:10px;padding:8px 10px;margin-bottom:10px}
+        .action-pill{font:inherit;cursor:pointer;padding:8px 14px;font-size:13px;font-weight:600;border-radius:6px;border:1.5px solid #c9a227;background:rgba(201,162,39,0.12);color:#f0e8d2;transition:filter .15s,transform .1s}
+        .action-pill:hover{filter:brightness(1.15)}
+        .action-pill:active{transform:scale(0.98)}
+        .action-pill:disabled{opacity:.4;cursor:not-allowed;filter:none}
+        .info-pill{font:inherit;cursor:pointer;padding:6px 12px;font-size:13px;border-radius:6px;border:1px solid #2a3d57;background:#12233a;color:#93a3ba;transition:border-color .15s,color .15s}
+        .info-pill:hover{border-color:#3a5273;color:#cfd6de}
+        .info-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
         .modal-panel{background:#0d1c30;border:1px solid #2a3d57;border-radius:12px;padding:18px 20px;animation:museoModalIn .2s ease-out}
         @keyframes museoModalIn{from{opacity:0;transform:scale(0.98)}to{opacity:1;transform:scale(1)}}
         .civcard{background:#12233a;border:1px solid #263a54;border-radius:8px;padding:12px;cursor:pointer;transition:border-color .15s;text-align:left;color:#e9e2cf}
@@ -1962,7 +2242,7 @@ export default function Yhteiskunta() {
                 {s.nation ? `${s.nation.icon} ${tc("nations", s.nation.key, "name", s.nation.name)}` : `${s.civ.icon} ${tc("civs", s.civ.key, "name", s.civ.name)}`}
               </div>
               <div style={{ fontSize: 13, color: "#93a3ba", letterSpacing: 2, textTransform: "uppercase", marginTop: 2 }}>
-                {t("eraYearLabel")(TE(lang, s.era, "name", era.name), s.year)}
+                {t("eraYearLabel")(CE(lang, s.civ?.key, s.era, "name", TE(lang, s.era, "name", era.name)), s.year)}
               </div>
             </div>
             <div style={{ textAlign: "right" }}>
@@ -2060,36 +2340,43 @@ export default function Yhteiskunta() {
             <div className="stat-grid">
               <Stat label={t("statPop")} value={fmt(pop)} sub={`👶${fmt(s.children)} 💪${fmt(s.workers)} 👴${fmt(s.elderly)}`} warn={pop < 2000} />
               <Stat label={t("statFood")} value={fmt(s.foodStore)} sub={`${t("statBalance")} ${foodBalance >= 0 ? "+" : ""}${fmt(foodBalance)}`} warn={foodBalance < 0 && s.foodStore < pop * 0.5} />
-              <Stat label={t("statResearch")} value={nextEra ? `${fmt(s.research)}/${fmt(nextEra.research)}` : fmt(s.research)} sub={nextEra ? `→ ${TE(lang, s.era + 1, "name", nextEra.name)}` : t("statTopEra")} />
+              <Stat label={t("statResearch")} value={nextEra ? `${fmt(s.research)}/${fmt(nextEra.research)}` : fmt(s.research)} sub={nextEra ? `→ ${CE(lang, s.civ?.key, s.era + 1, "name", TE(lang, s.era + 1, "name", nextEra.name))}` : t("statTopEra")} />
               <Stat label={t("statLife")} value={Math.round(derived.lifeExpectancy) + T(lang, "metrics", "lifeExpectancy", "unit", " v")} />
               <Stat label={t("statHealth")} value={Math.round(derived.healthCov * 100) + " %"} sub={t("statHealthSub")(Math.round(derived.eduCov * 100), Math.round(derived.careCov * 100))} warn={derived.healthCov < 0.7} />
               <Stat label={t("statCommunity")} value={Math.round(derived.cohesion * 100) + " %"} sub={t("statCommunitySub")(Math.round(derived.morale * 100))} warn={derived.cohesion < 0.5 || derived.adminCov < 0.6} />
             </div>
 
-            <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
-              <button onClick={() => setPyramidOpen(true)} className="paper" style={{ cursor: "pointer", font: "inherit", padding: "6px 12px", fontSize: 13, color: "#cfd6de" }}>
-                {t("pyramidBtn")(Math.round(derived.avgAge))}
-              </button>
-              <button onClick={() => setGovOpen(true)} className="paper" style={{ cursor: "pointer", font: "inherit", padding: "6px 12px", fontSize: 13, color: "#cfd6de" }}>
+            {/* Toimintopalkki: pelitilaa muuttavat painikkeet (hallinto, kansallisvaltio, vuoron eteneminen) omana, kultareunaisena ryhmänään */}
+            <div className="action-bar">
+              <button onClick={() => setGovOpen(true)} className="action-pill">
                 {govByKey(s.gov).icon} {t("govBtn")(tc("governments", govByKey(s.gov).key, "name", govByKey(s.gov).name))}
               </button>
-              <button onClick={() => setMetricsOpen(true)} className="paper" style={{ cursor: "pointer", font: "inherit", padding: "6px 12px", fontSize: 13, color: "#cfd6de" }}>
-                {t("metricsBtn")}
-              </button>
-              <button onClick={() => setHistoryOpen(true)} className="paper" style={{ cursor: "pointer", font: "inherit", padding: "6px 12px", fontSize: 13, border: "1px solid #c9a227", background: "rgba(201,162,39,0.1)", fontWeight: 600, color: "#f0e8d2" }}>
-                {t("historyBtn")}
-              </button>
               {s.nation ? (
-                <div className="paper" style={{ padding: "6px 12px", fontSize: 13, background: "rgba(201,162,39,0.1)", color: "#cfd6de" }}>
-                  {s.nation.icon} {tc("nations", s.nation.key, "name", s.nation.name)} <span style={{ color: "#93a3ba" }}>{t("nationTag")}</span>
+                <div className="action-pill" style={{ cursor: "default" }}>
+                  {s.nation.icon} {tc("nations", s.nation.key, "name", s.nation.name)} <span style={{ opacity: 0.7 }}>{t("nationTag")}</span>
                 </div>
               ) : (
-                s.era >= 2 && NATION_BRANCHES[s.civ.key] && (
-                  <button onClick={() => setNationOpen(true)} className="paper" style={{ cursor: "pointer", font: "inherit", padding: "6px 12px", fontSize: 13, border: "1px solid #c9a22766", background: "rgba(201,162,39,0.06)", color: "#cfd6de" }}>
+                s.era >= 3 && NATION_BRANCHES[s.civ.key] && (
+                  <button onClick={() => setNationOpen(true)} className="action-pill">
                     {t("formNationBtn")}
                   </button>
                 )
               )}
+              <span style={{ flex: 1 }} />
+              <button className="btn" style={{ padding: "9px 20px", fontSize: 15 }} onClick={() => nextTurn(5)} disabled={!!s.gameOver}>{t("nextTurnBtn")}</button>
+            </div>
+
+            {/* Info-palkki: vain tietoa näyttävät painikkeet, visuaalisesti hillitympiä kuin toimintopalkin painikkeet */}
+            <div className="info-bar">
+              <button onClick={() => setPyramidOpen(true)} className="info-pill">
+                {t("pyramidBtn")(Math.round(derived.avgAge))}
+              </button>
+              <button onClick={() => setMetricsOpen(true)} className="info-pill">
+                {t("metricsBtn")}
+              </button>
+              <button onClick={() => setHistoryOpen(true)} className="info-pill">
+                {t("historyBtn")}
+              </button>
             </div>
 
             {nationOpen && (
@@ -2140,7 +2427,7 @@ export default function Yhteiskunta() {
                         <div>
                           <span style={{ fontSize: 14, color: "#cfd6de" }}>{m.icon} {tc("metrics", m.key, "name", m.name)}</span>
                           {unlocked && <InfoButton title={tc("metrics", m.key, "infoTitle", m.infoTitle)} text={tc("metrics", m.key, "infoText", m.infoText)} />}
-                          {!unlocked && <div style={{ fontSize: 10.5, color: "#93a3ba" }}>{t("metricLocked")(TE(lang, m.unlockEra, "name", ERAS[m.unlockEra].name))}</div>}
+                          {!unlocked && <div style={{ fontSize: 10.5, color: "#93a3ba" }}>{t("metricLocked")(CE(lang, s.civ?.key, m.unlockEra, "name", TE(lang, m.unlockEra, "name", ERAS[m.unlockEra].name)))}</div>}
                         </div>
                         {unlocked && (
                           <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontWeight: 600, fontSize: 15, color: "#e9e2cf" }}>
@@ -2156,7 +2443,7 @@ export default function Yhteiskunta() {
 
             {historyOpen && (() => {
               const govName = tc("governments", govByKey(s.gov).key, "name", govByKey(s.gov).name);
-              const eraName = TE(lang, s.era, "name", era.name);
+              const eraName = CE(lang, s.civ?.key, s.era, "name", TE(lang, s.era, "name", era.name));
               const civName = tc("civs", s.civ.key, "name", s.civ.name);
               const nationName = s.nation ? tc("nations", s.nation.key, "name", s.nation.name) : null;
               const summaryText = [
@@ -2291,7 +2578,7 @@ export default function Yhteiskunta() {
                       <div style={{ height: 8, background: "#1c3049", borderRadius: 4, overflow: "hidden", marginBottom: 5 }}>
                         <div style={{ width: `${(g.n / pop) * 100}%`, height: "100%", background: g.color }} />
                       </div>
-                      <div style={{ fontSize: 12, color: "#93a3ba" }}>{t("eraLabel")(TE(lang, s.era, "name", era.name), g.role)}</div>
+                      <div style={{ fontSize: 12, color: "#93a3ba" }}>{t("eraLabel")(CE(lang, s.civ?.key, s.era, "name", TE(lang, s.era, "name", era.name)), g.role)}</div>
                     </div>
                   ))}
                   <div style={{ textAlign: "center", marginTop: 6 }}>
@@ -2313,7 +2600,7 @@ export default function Yhteiskunta() {
                     const unlocked = govUnlocked(g, s.era, derived);
                     const active = s.gov === g.key;
                     const reqText = g.minEra === 0 && !g.reqEdu && !g.reqAdmin && !g.reqCohesion ? t("govUnlockedFromStart") : [
-                      g.minEra > 0 ? t("govReqEra")(TE(lang, g.minEra, "name", ERAS[g.minEra].name)) : null,
+                      g.minEra > 0 ? t("govReqEra")(CE(lang, s.civ?.key, g.minEra, "name", TE(lang, g.minEra, "name", ERAS[g.minEra].name))) : null,
                       g.reqEdu ? t("govReqEdu")(Math.round(g.reqEdu * 100)) : null,
                       g.reqAdmin ? t("govReqAdmin")(Math.round(g.reqAdmin * 100)) : null,
                       g.reqCohesion ? t("govReqCohesion")(Math.round(g.reqCohesion * 100)) : null,
@@ -2342,7 +2629,7 @@ export default function Yhteiskunta() {
 
             {derived.skillPenalty < 1 && (
               <div style={{ background: "rgba(201,162,39,0.1)", border: "1px solid #c9a22766", borderRadius: 6, padding: "8px 14px", marginBottom: 12, fontSize: 14, color: "#cfd6de" }}>
-                {t("skillGapWarning")(TE(lang, s.era, "name", era.name), fmt(eraMinPop), Math.round(derived.skillPenalty * 100))}
+                {t("skillGapWarning")(CE(lang, s.civ?.key, s.era, "name", TE(lang, s.era, "name", era.name)), fmt(eraMinPop), Math.round(derived.skillPenalty * 100))}
               </div>
             )}
 
@@ -2441,7 +2728,7 @@ export default function Yhteiskunta() {
 
                     {key === "health" && (
                       <div style={{ marginTop: 6, paddingLeft: 4, borderLeft: "2px solid #263a54" }}>
-                        {s.era >= 1 ? (
+                        {s.era >= 2 ? (
                           <>
                             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#93a3ba", marginBottom: 4 }}>
                               <span>{t("healthFocusLabel")}</span>
@@ -2455,7 +2742,7 @@ export default function Yhteiskunta() {
                               <button className="step" style={{ minWidth: 34, height: 32, fontSize: 13 }} onClick={() => setHealthFocus(s.healthFocus + 10)} disabled={!!s.gameOver || s.healthFocus >= 100}>+10</button>
                               <InfoButton title={t("healthFocusInfoTitle")} text={t("healthFocusInfoText")} />
                             </div>
-                            {s.era >= 2 ? (
+                            {s.era >= 3 ? (
                               <>
                                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#93a3ba", marginBottom: 4 }}>
                                   <span>{t("specialistLabel")}</span>
@@ -2482,7 +2769,7 @@ export default function Yhteiskunta() {
 
                     {key === "research" && (
                       <div style={{ marginTop: 6, paddingLeft: 4, borderLeft: "2px solid #263a54" }}>
-                        {s.era >= 1 ? (
+                        {s.era >= 2 ? (
                           <>
                             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#93a3ba", marginBottom: 4 }}>
                               <span>{t("appliedLabel")}</span>
@@ -2514,7 +2801,7 @@ export default function Yhteiskunta() {
 
                     {key === "admin" && (
                       <div style={{ marginTop: 6, paddingLeft: 4, borderLeft: "2px solid #263a54" }}>
-                        {s.era >= 2 ? (
+                        {s.era >= 3 ? (
                           <>
                             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#93a3ba", marginBottom: 4 }}>
                               <span>{t("detectiveLabel")}</span>
@@ -2537,7 +2824,7 @@ export default function Yhteiskunta() {
 
                     {key === "industry" && (
                       <div style={{ marginTop: 6, paddingLeft: 4, borderLeft: "2px solid #263a54" }}>
-                        {s.era >= 1 ? (
+                        {s.era >= 2 ? (
                           <>
                             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#93a3ba", marginBottom: 4 }}>
                               <span>{t("industryLabel")}</span>
@@ -2579,13 +2866,9 @@ export default function Yhteiskunta() {
                   </tbody>
                 </table>
                 <div style={{ marginTop: 10, fontSize: 13, color: "#93a3ba" }}>
-                  {t("eraBackground")} <InfoButton title={TE(lang, s.era, "name", era.name)} text={`${TE(lang, s.era, "desc", era.desc)} ${TE(lang, s.era, "hist", era.hist)}`} />
+                  {t("eraBackground")} <InfoButton title={CE(lang, s.civ?.key, s.era, "name", TE(lang, s.era, "name", era.name))} text={`${TE(lang, s.era, "desc", era.desc)} ${CE(lang, s.civ?.key, s.era, "hist", TE(lang, s.era, "hist", era.hist))} ${t("eraTransitionNote")}`} />
                 </div>
               </Section>
-            </div>
-
-            <div style={{ textAlign: "center", margin: "18px 0" }}>
-              <button className="btn" style={{ width: "100%", maxWidth: 420 }} onClick={nextTurn} disabled={!!s.gameOver}>{t("nextTurnBtn")}</button>
             </div>
 
             {infoModal && (
