@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Yhteiskunta — opetuspeli historian ja yhteiskuntaopin tunneille</title>
 <meta name="description" content="Yhteiskunta on suomenkielinen selainpeli, jossa opiskelija johtaa yhteiskuntaa agraariajalta nykyaikaan. Ilmainen perusversio, koululisenssit lukioille ja yläkouluille." />
+<link rel="icon" type="image/svg+xml" href="assets/logo-mark.svg" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Source+Sans+3:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -59,7 +60,8 @@
 
   /* ---- Nav ---- */
   .nav{display:flex;justify-content:space-between;align-items:center;padding:22px 56px;border-bottom:1px solid var(--border)}
-  .logo{font-family:var(--serif);font-size:24px;font-weight:700;letter-spacing:.5px;color:var(--navy)}
+  .logo{display:inline-flex;align-items:center;gap:10px;font-family:var(--serif);font-size:24px;font-weight:700;letter-spacing:.5px;color:var(--navy)}
+  .logo img{width:30px;height:30px;border-radius:50%;display:block}
   .nav-right{display:flex;align-items:center;gap:32px}
   .nav-links{display:flex;align-items:center;gap:32px;font-size:14px;font-weight:600;color:var(--muted);list-style:none;margin:0;padding:0}
   .nav-links a{color:inherit}
@@ -182,7 +184,7 @@
 <div class="wrap">
 
   <nav class="nav" aria-label="Päänavigaatio">
-    <a class="logo" href="#top" data-i18n="logo">Yhteiskunta</a>
+    <a class="logo" href="#top"><img src="assets/logo-mark.svg" alt="" width="30" height="30" /><span data-i18n="logo">Yhteiskunta</span></a>
     <div class="nav-right">
       <ul class="nav-links">
         <li><a href="#peli" data-i18n="navGame">Peli</a></li>

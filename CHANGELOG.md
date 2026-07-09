@@ -6,11 +6,17 @@ Formaatti perustuu [Keep a Changelog](https://keepachangelog.com/) -käytäntö�
 
 Kehitteillä `dev`-haarassa, ei vielä julkaistu testaajille.
 
+### Lisätty
+
+- Visuaalinen ilmelogo "Vuosirenkaat" (`assets/logo-mark.svg`, `assets/logo-full.svg`, generoitu deterministisesti `tools/gen-logo.js`:llä) — favicon ja tunnus kaikilla sivuilla
+- Versionhallintamalli: `dev`-haara jatkuvalle työlle, semver-tagit + tämä muutosloki, CI-syntaksitarkistus (`tools/check-syntax.js`, `.github/workflows/ci.yml`)
+
 ## [0.1.0] — 2026-07-09
 
 Ensimmäinen versio, joka on viety testaajien saataville.
 
 ### Lisätty
+
 - Sivilisaatiopeli 20 historiallisella sivilisaatiolla, hallintomuodoilla, työvoimasektoreilla ja väestönkehitysmoottorilla
 - Viisi aikakautta (Muinaisaika, Keskiaika, Varhaisteollinen, Teollinen, Moderni) — Agraarinen jaettu kahtia historiallisen tarkkuuden vuoksi
 - Sivilisaatiokohtaiset aikakausinimet ja -tarinat kaikille 20 sivilisaatiolle
@@ -20,9 +26,11 @@ Ensimmäinen versio, joka on viety testaajien saataville.
 - Museo-tyylinen käyttöliittymä, luokkahuonenäkymä pedagogisine pohdintakysymyksineen
 
 ### Muutettu
+
 - Pelin vuoropituus yksinkertaistettu: vain 5 vuoden vuoro (1 vuoden vaihtoehto poistettu)
 
 ### Tunnetut rajoitukset
+
 - Sivilisaatiokohtaiset aikakausinimet toistaiseksi vain suomeksi — muilla kielillä näytetään geneerinen aikakausinimi
 - Kansallisvaltio-DLC on demo-tasoinen simulaatio (ei oikeaa maksua)
 
