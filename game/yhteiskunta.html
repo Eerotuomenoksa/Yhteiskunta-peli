@@ -340,33 +340,1010 @@ function pickEvent(extra) {
   return pool[pool.length - 1];
 }
 
-const makeStart = (civ, villageName, startSkills) => ({
-  civ,
-  villageName: villageName || "",
-  startSkills: startSkills || [],
-  year: 0,
-  children: 2200, workers: 6300, elderly: 1500,
-  foodStore: Math.round(5000 * combinedMods(civ, null, startSkills).store),
-  era: 0, research: 0,
-  alloc: { farm: 72, health: 3, edu: 3, industry: 8, research: 2, religion: 2, arts: 1, admin: 4, services: 5 },
-  gov: "heimo",
-  specialistShare: 0,
-  healthFocus: 50,
-  appliedShare: 0,
-  nation: null,
-  inventionIdx: 0,
-  farmMode: "pientila",
-  eduMode: "perus",
-  detectiveShare: 0,
-  industryFocus: 0,
-  log: civ ? [{ year: 0, text: `${civ.icon} ${civ.name} aloittaa: 10 000 ihmistä täydessä eristyksessä. ${civ.trait}: ${civ.desc}`, tone: "info" }] : [],
-  milestones: civ ? [{ year: 0, text: `🏘️ ${villageName ? `Kylä "${villageName}"` : "Yhteisö"} perustettiin — ${civ.icon} ${civ.name}${startSkills && startSkills.length ? `. Aloitustaidot: ${startSkills.map((k) => startingSkillByKey(k)?.name).join(" ja ")}.` : "."}` }] : [],
-  history: [{ year: 0, pop: 10000 }],
-  stableTurns: 0,
-  gameOver: null,
-  lastEvent: null,
-  report: null,
-});
+// ============ I18N: pelisisällön käännökset (en, da) ============
+// Avaimet vastaavat suomenkielisten perustaulukkojen (ERAS, CIVS, EVENTS, jne. yllä) key/id-kenttiä
+// tai indeksejä, jotta käännös löytyy T()-apufunktioilla ilman pelilogiikan muuttamista.
+const I18N = {
+  en: {
+    storyLabels: ["The elders tell", "The paper writes", "The report states", "Online it's said"],
+    eras: [
+      { name: "Agrarian", desc: "Horse and plow. Almost everyone must farm so that everyone eats.", hist: "Corresponds to Europe before the 1800s: about 75–90% of the workforce toiled in the fields.",
+        roles: { children: "Herded livestock, carried water, scared birds off the fields, and looked after younger siblings from age 5–6 — genuine child labor.", youth: "Entered full-time work around age 12–14: plowing, sowing, tending livestock.", elderly: "Did not retire in any formal sense: they minded grandchildren, spun wool, repaired tools, and passed on experience." } },
+      { name: "Early Industrial", desc: "Steam, the mill, and crop rotation. One farmer feeds six.", hist: "Corresponds to the mid-1800s: by 1851 only 28% of England's workforce was in agriculture.",
+        roles: { children: "Many children already worked in factories or mines before protective laws; some stayed on with farm chores.", youth: "Apprenticeships and factory work became common; migration from the countryside to cities began.", elderly: "Formal pensions barely existed — the elderly lived with family and did lighter housework as long as they could." } },
+      { name: "Industrial", desc: "Fertilizer and tractors. One farmer feeds 25.", hist: "Corresponds to the mid-1900s: mechanization freed people for factories and services.",
+        roles: { children: "Child labor laws and compulsory schooling spread — children are now mostly in school.", youth: "Vocational training and factory work; young people move independently to cities.", elderly: "Pension systems spread — formal retirement emerges only now, though many still help with grandchildren." } },
+      { name: "Modern", desc: "Automation and biotech. One farmer feeds 100.", hist: "Corresponds to the present day: in rich countries under 2% of the workforce produces food for everyone.",
+        roles: { children: "Education and hobbies — child labor is banned and rare.", youth: "A long education path, entry into working life comes later.", elderly: "Formal retirement is the norm; informal childcare help continues, but on a smaller scale relative to the population." } },
+    ],
+    inventions: [
+      [ { name: "The plow", desc: "a wooden plow multiplies a single farmer's productivity." },
+        { name: "Crop rotation", desc: "letting land rest in turns keeps harvests steadier." },
+        { name: "The watermill", desc: "flowing water grinds grain — saving muscle power for other work." },
+        { name: "Writing", desc: "record-keeping of stores and taxes becomes far easier." } ],
+      [ { name: "The steam engine", desc: "mechanical power replaces muscle power at scale for the first time." },
+        { name: "The railway", desc: "goods and people move faster than ever before." },
+        { name: "Vaccination", desc: "a method developed against smallpox saves thousands." },
+        { name: "The telegraph", desc: "messages now travel at nearly the speed of light along a wire." } ],
+      [ { name: "Electric lighting", desc: "factories and homes can now operate after dark." },
+        { name: "The automobile industry", desc: "assembly-line production makes vehicles commonplace." },
+        { name: "Antibiotics", desc: "penicillin turns an ordinary infection into a treatable ailment." },
+        { name: "Radio", desc: "news and entertainment now reach the whole nation in real time." } ],
+      [ { name: "The internet", desc: "information and people connect globally." },
+        { name: "Mapping the human genome", desc: "medicine gains a tool to understand disease from its foundations." },
+        { name: "Renewable energy", desc: "solar and wind power begin replacing fossil fuels." },
+        { name: "Artificial intelligence", desc: "machines begin assisting research and decision-making." } ],
+    ],
+    civs: {
+      sumer: { name: "Sumer", trait: "Irrigation canals & cuneiform script", desc: "The first cities, record-keeping, and grain stores." },
+      egypti: { name: "Egypt", trait: "The Nile floods", desc: "A predictable flood cycle made agriculture exceptionally productive." },
+      indus: { name: "Indus Valley", trait: "Sewers & city planning", desc: "The cities of Harappa had the world's first sewer systems." },
+      kiina: { name: "China", trait: "Bureaucracy & inventions", desc: "Paper, gunpowder, the compass — and a millennia-old civil service." },
+      kreikka: { name: "Greece", trait: "Philosophy & science", desc: "Harsh mountains, but bright ideas." },
+      rooma: { name: "Rome", trait: "Aqueducts & administration", desc: "Roads, water systems, and organization that scaled into an empire." },
+      persia: { name: "Persia", trait: "The King's Road", desc: "Efficient administration and a postal system united a vast territory." },
+      maya: { name: "Maya", trait: "Astronomy & calendar", desc: "Advanced mathematics — but droughts hit hard." },
+      inka: { name: "Inca", trait: "Qollqa storehouses & terrace farming", desc: "The state stored food for years ahead on the slopes of the Andes." },
+      atsteekit: { name: "Aztecs", trait: "Chinampa floating fields", desc: "Intensive lake farming and a rapidly growing population." },
+      intia: { name: "India", trait: "Zero & great rivers", desc: "A gift of mathematics to the world, and the fertile Ganges plain." },
+      japani: { name: "Japan", trait: "Resilience & rebuilding", desc: "Hardened by earthquakes and typhoons — quick to recover from crises." },
+      khmer: { name: "Khmer", trait: "Baray water reservoirs", desc: "Angkor's irrigation system fed the largest city of the Middle Ages." },
+      bysantti: { name: "Byzantium", trait: "Hospitals & diplomacy", desc: "Ancient medicine survived and developed in Constantinople." },
+      arabia: { name: "Islamic Golden Age", trait: "The House of Wisdom", desc: "In Baghdad, the world's knowledge was translated and advanced." },
+      mali: { name: "Mali", trait: "The libraries of Timbuktu", desc: "Mansa Musa's realm — gold, trade, and scholarship." },
+      aksum: { name: "Aksum / Ethiopia", trait: "Highland stronghold", desc: "The mountains protected it, terraces fed it — an unusually resilient state." },
+      pohjola: { name: "The North", trait: "A people of scarce lands", desc: "Scarcity taught survival — even famine years are endured." },
+      polynesia: { name: "Polynesia", trait: "Island community skill", desc: "Small, isolated communities learned to thrive with little." },
+      eurooppa: { name: "Western Europe", trait: "The printing press & competition", desc: "The spread of knowledge accelerated industrialization." },
+    },
+    skills: {
+      kastelu: { name: "Irrigation system", desc: "Efficient water management raises food production." },
+      kirjanpito: { name: "Record-keeping", desc: "A method for recording information speeds up research." },
+      varastointi: { name: "Great grain stores", desc: "Learned storage skill increases storage capacity." },
+      yrtit: { name: "Herbal medicine", desc: "Folk medicine improves healthcare coverage." },
+      varautuminen: { name: "Disaster preparedness", desc: "Learned caution softens the blow of famines and epidemics." },
+      suvut: { name: "Large families", desc: "Strong kin communities support having children." },
+      hallinto: { name: "Early administration", desc: "A clear decision-making method requires a smaller population for the era transition." },
+      monipuolisuus: { name: "Diversified farming", desc: "Knowledge of several farming methods balances yield and resilience." },
+    },
+    governments: {
+      heimo: { name: "Tribal Council", desc: "Elders and chiefs decide together, face to face.", axis: "Early" },
+      tyrannia: { name: "Tyranny / Autocracy", desc: "One ruler, fast decisions — but no accountability.", axis: "Autocratic" },
+      oligarkia: { name: "Oligarchy / Aristocracy", desc: "A narrow elite rules from its own vantage point.", axis: "Autocratic" },
+      tasavalta: { name: "Republic", desc: "Elected representatives decide; power is limited by law.", axis: "Representative" },
+      demokratia: { name: "Democracy", desc: "The people vote — slow, but legitimate and stable.", axis: "Popular rule" },
+      teokratia: { name: "Theocracy", desc: "Clergy and religious law guide society.", axis: "Religious" },
+    },
+    metrics: {
+      lifeExpectancy: { name: "Life Expectancy", infoTitle: "Life Expectancy", infoText: "In reality, life expectancy is calculated from age-specific mortality rates using a life table — it is not the average age at death but a statistical projection of how long a newborn would live under current mortality rates. In the game the value is derived from health and care coverage plus the era's base level.", unit: " y" },
+      employmentRate: { name: "Employment Rate", infoTitle: "Employment Rate", infoText: "In reality, the employment rate is the share of employed people among the working-age population (e.g. statistics offices typically use ages 15–64). The concept only emerged with wage labor and industrialization in the 1800s — before that 'unemployment' wasn't a meaningful statistic. In the game the value reflects how well administration functions and whether skill levels suffice.", unit: "%" },
+      pollution: { name: "Pollution", infoTitle: "Pollution Index", infoText: "In reality, air pollution is measured via, e.g., particulate concentration (PM2.5), CO2 emissions per capita, and air quality indexes. Industrialization in the 1800s brought the first major emissions, and environmental awareness only began in the latter half of the 1900s. In the game the value rises with investment in industry and falls with research (cleaner technology). Lower is better.", unit: " idx" },
+      gdpPerCapita: { name: "GDP / capita", infoTitle: "Gross Domestic Product per capita", infoText: "In reality, GDP is calculated three ways that in theory match: by production (value added), by income (wages + profits), or by expenditure (consumption + investment + exports − imports). National accounting was only formalized in the 1930s–40s (Simon Kuznets, Nobel 1971). In the game the figure is an abstract blend of output and technology, not a real currency.", unit: " units/person" },
+      crimeRate: { name: "Crime Rate", infoTitle: "Crime Rate", infoText: "In reality, crime is measured as reported offenses per 100,000 inhabitants, but the statistic suffers from varying reporting thresholds across times and places. Systematic crime statistics and criminology as a discipline emerged with 1800s urbanization. In the game the value rises with weak administration and low cohesion. Lower is better.", unit: " /100,000" },
+      happiness: { name: "Happiness Index", infoTitle: "Happiness Index", infoText: "In reality, e.g. the UN World Happiness Report is based on surveys where people rate their own life on a 0–10 scale, combined with explanatory factors like GDP, social support, and health. The report was first published in 2012. In the game the index combines health, cohesion, morale, wealth, and crime into a single 0–10 figure.", unit: " /10" },
+    },
+    farmModes: {
+      pientila: { name: "Smallholding", desc: "Traditional, steady but modest yield." },
+      suurtila: { name: "Large farms", desc: "Mechanized large farms: more yield per farmer, but more vulnerable to disruption and puts more strain on the environment." },
+      bio: { name: "Organic farming", desc: "Organic methods: lower yield, but better resilience and a cleaner environment." },
+      erikois: { name: "Specialty crops", desc: "Expensive specialty goods (wine, spices, luxury goods): less staple food, but more wealth." },
+    },
+    eduModes: {
+      perus: { name: "Basic education", desc: "Broad basic education for all — steady, stable education coverage." },
+      ammatillinen: { name: "Vocational training", desc: "Practical job skills — improves production efficiency, but doesn't raise research as much." },
+      korkeakoulu: { name: "Higher education", desc: "Universities and research institutions — significantly raises research, but reaches a smaller share of the population." },
+    },
+    sectors: {
+      farm: { name: "Agriculture" }, health: { name: "Health" }, edu: { name: "Education" }, industry: { name: "Industry & construction" },
+      research: { name: "Research" }, religion: { name: "Religion & spirituality" }, arts: { name: "Arts & culture" }, admin: { name: "Administration & justice" }, services: { name: "Services & care" },
+    },
+    events: {
+      kato: { name: "Crop Failure", desc: "Frost took the harvest. Food production −40% this turn." },
+      hyvasato: { name: "Bountiful Harvest", desc: "Favorable weather. Food production +30%." },
+      epidemia: { name: "Epidemic", desc: "A plague spreads. Healthcare determines how many survive." },
+      muutto: { name: "Wandering Settlers", desc: "Despite isolation, a small group joins the community (+3% population)." },
+      rauha: { name: "A Peaceful Spell", desc: "Nothing special happened. Life goes on." },
+      tulipalo: { name: "Great Fire", desc: "The stores burned. Food reserves halved." },
+      syntyvyys: { name: "Baby Boom", desc: "Good times show in the cradles. Birth rate +30% this turn." },
+      nalkavuodet_fi: { name: "The Great Famine of 1866–68", desc: "Three consecutive cold summers. The harvest fails widely." },
+      sisallissota_fi: { name: "Civil War of 1918", desc: "Society splits in two — the economy and stores suffer from the unrest." },
+      talvisota_fi: { name: "The Winter War", desc: "A vastly stronger foe is fought with sheer resolve. Resources go to war instead of research." },
+      nokia_fi: { name: "The Rise of Nokia", desc: "From rubber manufacturing to mobile phones — a technology export success." },
+      eu_fi: { name: "EU Membership, 1995", desc: "Joining the European Union opens markets and brings stability." },
+      suurvalta_se: { name: "Age of the Great Power", desc: "Military and administrative might grows around the Baltic Sea." },
+      emigraatio_se: { name: "Emigration to America", desc: "Hunger and cramped conditions drive large numbers to emigrate overseas." },
+      folkhemmet_se: { name: "Folkhemmet — the People's Home", desc: "Broad social security and equality are built systematically." },
+      oljy_no: { name: "North Sea Oil Discovery", desc: "1969: a massive discovery of oil and gas reserves in the North Sea." },
+      itsenaisyys_no: { name: "Independence from Sweden, 1905", desc: "A peaceful separation gives rise to its own state." },
+      kalastus_no: { name: "Fishing and Seafaring", desc: "A long coastline and fish-rich waters feed the nation." },
+      osuuskunnat_dk: { name: "Agricultural Cooperatives", desc: "Smallholders pool their strength — export agriculture flourishes." },
+      miehitys_dk: { name: "German Occupation, 1940–45", desc: "Wartime strains the economy and stores." },
+      tuulivoima_dk: { name: "Welfare Model and Wind Power", desc: "Renewable energy and strong social security build a reputation." },
+      vallankumous_fr: { name: "The French Revolution, 1789", desc: "The old order falls — the economy is shaken by the upheaval." },
+      siirtomaat_fr: { name: "Colonial Power", desc: "An extensive colonial network brings resources and wealth." },
+      ydinvoima_fr: { name: "Nuclear Power and Technology", desc: "An ambitious nuclear power program raises energy self-sufficiency." },
+      yhdistyminen_de: { name: "Unification, 1871", desc: "Fragmented principalities unite into a powerful state." },
+      jalleenrakennus_de: { name: "War Losses and Reconstruction", desc: "Heavy losses, but rapid recovery follows." },
+      talousihme_de: { name: "The Economic Miracle (Wirtschaftswunder)", desc: "Rapid reconstruction and industrial recovery after the war." },
+      teollinen_gb: { name: "Industrial Revolution Pioneer", desc: "The steam engine and factories transform society first, ahead of the world." },
+      imperiumi_gb: { name: "Empire and World Trade", desc: "A vast empire brings resources and markets from every continent." },
+      sodat_gb: { name: "The World Wars", desc: "Two world wars strain the economy and food supply heavily." },
+    },
+    nations: {
+      suomi: { name: "Finland", trait: "Sisu and the welfare state" },
+      ruotsi: { name: "Sweden", trait: "Legacy of the Great Power era" },
+      norja: { name: "Norway", trait: "Oil wealth and seafaring" },
+      tanska: { name: "Denmark", trait: "Agricultural cooperatives" },
+      ranska: { name: "France", trait: "Revolution and Enlightenment" },
+      saksa: { name: "Germany", trait: "Industrial great power" },
+      englanti: { name: "Great Britain", trait: "Pioneer of the Industrial Revolution" },
+    },
+    facts: [
+      "Before industrialization, 80–90% of the world's population worked in agriculture. Today, in rich countries, the share is under 2%.",
+      "In England in 1381, about 78% of adult men worked in agriculture. By 1911 the share had fallen to 11%.",
+      "The demographic transition means that as a society develops, mortality falls first and only later does fertility — in between, population grows rapidly. This happened in Finland in the 1800s–1900s.",
+      "In pre-industrial societies, up to a quarter of children died within their first year of life, and nearly half before adulthood. That's why fertility was also high: 5–7 children per woman.",
+      "In Finland's famine years of 1866–1868, an estimated 150,000–270,000 people died — about 8–9% of the population — one of the last great peacetime famines in Europe.",
+      "Historian Arnold Toynbee classified 21–28 civilizations in world history. Oswald Spengler counted eight, Carroll Quigley 24 — there is no consensus on the definition.",
+      "According to anthropologist Robin Dunbar, humans can maintain about 150 meaningful relationships. Larger communities need shared stories, religions, and institutions to stay cohesive.",
+      "The dependency ratio tells you how many children and elderly there are per hundred working-age people. Finland's is among the weakest in Europe due to an aging population.",
+      "The Black Death (1347–1351) is estimated to have killed 30–60% of Europe's population. The resulting labor shortage raised survivors' wages and broke down the feudal system.",
+      "The Incas stored food in their qollqa storehouses for up to 3–7 years of need — state-level disaster preparedness was the backbone of the empire.",
+      "The spread of the printing press from the 1450s onward halved the price of books and multiplied the speed information spread — it is considered one of the preconditions for industrialization.",
+      "According to UN estimates, the world's population was about 8.2 billion in 2025. As recently as 1800 it was about one billion.",
+      "Specialization requires a population base: a modern hospital with specialized departments needs a catchment of at least about 100,000–200,000 people to function efficiently.",
+      "The Roman Empire's aqueducts brought hundreds of thousands of cubic meters of water into the city each day — clean water was antiquity's most effective 'healthcare system'.",
+    ],
+    modLabels: {
+      farm: (v) => `Food production ${v > 1 ? "+" : ""}${Math.round((v - 1) * 100)}%`,
+      research: (v) => `Research ${v > 1 ? "+" : ""}${Math.round((v - 1) * 100)}%`,
+      birth: (v) => `Birth rate ${v > 1 ? "+" : ""}${Math.round((v - 1) * 100)}%`,
+      health: (v) => `Health ${v > 0 ? "+" : ""}${Math.round(v * 100)} pts`,
+      resilience: (v) => (v < 1 ? `Disasters ${Math.round((1 - v) * 100)}% milder` : `Disasters ${Math.round((v - 1) * 100)}% harsher`),
+      minPop: (v) => `Era population requirement ${Math.round((v - 1) * 100)}%`,
+      store: (v) => `Storage capacity ${v > 1 ? "+" : ""}${Math.round((v - 1) * 100)}%`,
+    },
+  },
+  da: {
+    storyLabels: ["De gamle fortæller", "Avisen skriver", "Rapporten fastslår", "Online lyder det"],
+    eras: [
+      { name: "Landbrugssamfund", desc: "Hest og plov. Næsten alle skal dyrke jorden, for at alle kan spise.", hist: "Svarer til Europa før 1800-tallet: omkring 75–90% af arbejdsstyrken slæbte på markerne.",
+        roles: { children: "Vogtede kvæg, bar vand, skræmte fugle væk fra markerne og passede yngre søskende fra 5–6-årsalderen — ægte børnearbejde.", youth: "Gik ind i fuldt arbejde omkring 12–14-årsalderen: pløjning, såning, kvægpasning.", elderly: "Gik ikke på formel pension: de passede børnebørn, spandt garn, reparerede redskaber og videregav erfaring." } },
+      { name: "Tidlig industriel", desc: "Damp, mølle og vekseldrift. Én landmand mætter seks.", hist: "Svarer til midten af 1800-tallet: i England var kun 28% af arbejdsstyrken i landbruget i 1851.",
+        roles: { children: "Mange børn arbejdede allerede på fabrikker eller i miner før beskyttelseslove; nogle blev ved gårdens gøremål.", youth: "Lærlingearbejde og fabriksarbejde blev almindeligt; udvandring fra landet til byerne begyndte.", elderly: "Der var næppe formel pension — de ældre boede hos familien og lavede lettere husligt arbejde, så længe de kunne." } },
+      { name: "Industriel", desc: "Kunstgødning og traktorer. Én landmand mætter 25.", hist: "Svarer til midten af 1900-tallet: mekaniseringen frigjorde folk til fabrikker og service.",
+        roles: { children: "Love mod børnearbejde og skolepligt bredte sig — børn går nu hovedsageligt i skole.", youth: "Erhvervsuddannelse og fabriksarbejde; unge flytter selvstændigt til byerne.", elderly: "Pensionssystemer breder sig — formel pensionering opstår først nu, selvom mange stadig hjælper med børnebørn." } },
+      { name: "Moderne", desc: "Automatisering og bioteknologi. Én landmand mætter 100.", hist: "Svarer til nutiden: i rige lande producerer under 2% af arbejdsstyrken mad til alle.",
+        roles: { children: "Uddannelse og fritidsinteresser — børnearbejde er forbudt og sjældent.", youth: "Lang uddannelsesvej, senere indtræden i arbejdslivet.", elderly: "Formel pension er normen; uformel børnepasningshjælp fortsætter, men i mindre omfang set i forhold til befolkningen." } },
+    ],
+    inventions: [
+      [ { name: "Ploven", desc: "en træplov mangedobler en enkelt landmands produktivitet." },
+        { name: "Vekseldrift", desc: "at lade jorden hvile på skift giver jævnere høst." },
+        { name: "Vandmøllen", desc: "rindende vand maler kornet — det sparer muskelkraft til andet arbejde." },
+        { name: "Skriften", desc: "regnskab over lagre og skatter bliver markant lettere." } ],
+      [ { name: "Dampmaskinen", desc: "mekanisk kraft erstatter for første gang muskelkraft i stor skala." },
+        { name: "Jernbanen", desc: "gods og mennesker bevæger sig hurtigere end nogensinde før." },
+        { name: "Vaccination", desc: "en metode udviklet mod kopper redder tusindvis." },
+        { name: "Telegrafen", desc: "beskeder rejser nu næsten med lysets hastighed langs en ledning." } ],
+      [ { name: "Elektrisk belysning", desc: "fabrikker og hjem kan nu fungere efter mørkets frembrud." },
+        { name: "Bilindustrien", desc: "samlebåndsproduktion gør køretøjer hverdagsagtige." },
+        { name: "Antibiotika", desc: "penicillin gør en almindelig infektion til en behandlelig lidelse." },
+        { name: "Radioen", desc: "nyheder og underholdning når nu hele nationen i realtid." } ],
+      [ { name: "Internettet", desc: "information og mennesker forbindes globalt." },
+        { name: "Kortlægning af det menneskelige genom", desc: "medicinen får et redskab til at forstå sygdomme fra bunden." },
+        { name: "Vedvarende energi", desc: "sol- og vindkraft begynder at erstatte fossile brændstoffer." },
+        { name: "Kunstig intelligens", desc: "maskiner begynder at hjælpe med forskning og beslutninger." } ],
+    ],
+    civs: {
+      sumer: { name: "Sumer", trait: "Kanaler & kileskrift", desc: "De første byer, bogføring og kornlagre." },
+      egypti: { name: "Egypten", trait: "Nilens oversvømmelser", desc: "En forudsigelig flodcyklus gjorde landbruget usædvanligt produktivt." },
+      indus: { name: "Indusdalen", trait: "Kloakering & byplanlægning", desc: "Byerne i Harappa havde verdens første kloaksystemer." },
+      kiina: { name: "Kina", trait: "Bureaukrati & opfindelser", desc: "Papir, krudt, kompas — og et tusindårigt embedsværk." },
+      kreikka: { name: "Grækenland", trait: "Filosofi & videnskab", desc: "Golde bjerge, men klare tanker." },
+      rooma: { name: "Rom", trait: "Akvædukter & administration", desc: "Veje, vandledninger og organisation, der voksede sig til et imperium." },
+      persia: { name: "Persien", trait: "Kongevejen", desc: "Effektiv forvaltning og postvæsen forbandt et enormt område." },
+      maya: { name: "Maya", trait: "Astronomi & kalender", desc: "Topmatematik — men tørker ramte hårdt." },
+      inka: { name: "Inkaerne", trait: "Qollqa-lagre & terrassedyrkning", desc: "Staten opbevarede mad i årevis frem i Andesbjergene." },
+      atsteekit: { name: "Aztekerne", trait: "Chinampa-flydende marker", desc: "Intensivt søbrug og en hurtigt voksende befolkning." },
+      intia: { name: "Indien", trait: "Nul & store floder", desc: "Matematikkens gave til verden og Ganges' frugtbare slette." },
+      japani: { name: "Japan", trait: "Sejhed & genopbygning", desc: "Hærdet af jordskælv og tyfoner — kommer hurtigt op igen efter kriser." },
+      khmer: { name: "Khmer", trait: "Baray-vandreservoirer", desc: "Angkors kunstvandingssystem fødte middelalderens største by." },
+      bysantti: { name: "Byzans", trait: "Hospitaler & diplomati", desc: "Antikkens lægevidenskab overlevede og udviklede sig i Konstantinopel." },
+      arabia: { name: "Den islamiske guldalder", trait: "Visdommens Hus", desc: "I Bagdad blev hele verdens viden oversat og videreudviklet." },
+      mali: { name: "Mali", trait: "Timbuktus biblioteker", desc: "Mansa Musas rige — guld, handel og lærdom." },
+      aksum: { name: "Aksum / Etiopien", trait: "Højlandets fæstning", desc: "Bjergene beskyttede, terrasserne fødte — en usædvanligt sejlivet stat." },
+      pohjola: { name: "Norden", trait: "Et folk af det golde land", desc: "Knaphed lærte folk at overleve — selv hungerår klares." },
+      polynesia: { name: "Polynesien", trait: "Ø-fællesskabets kunnen", desc: "Små, isolerede samfund lærte at klare sig med lidt." },
+      eurooppa: { name: "Vesteuropa", trait: "Bogtrykkerkunst & konkurrence", desc: "Videns udbredelse fremskyndede industrialiseringen." },
+    },
+    skills: {
+      kastelu: { name: "Kunstvandingssystem", desc: "Effektiv vandstyring øger fødevareproduktionen." },
+      kirjanpito: { name: "Bogføring", desc: "En metode til at registrere information fremskynder forskningen." },
+      varastointi: { name: "Store kornlagre", desc: "Indlært lagringsevne øger lagerkapaciteten." },
+      yrtit: { name: "Urtemedicin", desc: "Folkemedicin forbedrer sundhedsdækningen." },
+      varautuminen: { name: "Katastrofeberedskab", desc: "Indlært forsigtighed dæmper virkningen af hungerår og epidemier." },
+      suvut: { name: "Store familier", desc: "Stærke slægtsfællesskaber understøtter det at få børn." },
+      hallinto: { name: "Tidlig forvaltning", desc: "En klar beslutningsproces kræver en mindre befolkning for at skifte tidsalder." },
+      monipuolisuus: { name: "Alsidigt landbrug", desc: "Kendskab til flere dyrkningsmetoder balancerer udbytte og modstandsdygtighed." },
+    },
+    governments: {
+      heimo: { name: "Stammeråd", desc: "De ældste og høvdinge beslutter i fællesskab, ansigt til ansigt.", axis: "Tidlig" },
+      tyrannia: { name: "Tyranni / Enevælde", desc: "Én hersker, hurtige beslutninger — men ingen ansvarlighed.", axis: "Enevældig" },
+      oligarkia: { name: "Oligarki / Aristokrati", desc: "En snæver elite regerer ud fra egne interesser.", axis: "Enevældig" },
+      tasavalta: { name: "Republik", desc: "Valgte repræsentanter beslutter, magten er begrænset af lov.", axis: "Repræsentativ" },
+      demokratia: { name: "Demokrati", desc: "Folket stemmer — langsomt, men legitimt og stabilt.", axis: "Folkestyre" },
+      teokratia: { name: "Teokrati", desc: "Præsteskab og religiøse love styrer samfundet.", axis: "Religiøs" },
+    },
+    metrics: {
+      lifeExpectancy: { name: "Middellevetid", infoTitle: "Middellevetid", infoText: "I virkeligheden beregnes middellevetiden ud fra aldersspecifikke dødelighedstal med den såkaldte dødelighedstavle (life table) — det er ikke den gennemsnitlige dødsalder, men en statistisk prognose for, hvor længe en nyfødt ville leve med de nuværende dødelighedstal. I spillet udledes værdien af sundheds- og omsorgsdækning samt tidsalderens grundniveau.", unit: " år" },
+      employmentRate: { name: "Beskæftigelsesgrad", infoTitle: "Beskæftigelsesgrad", infoText: "I virkeligheden er beskæftigelsesgraden andelen af beskæftigede blandt befolkningen i den arbejdsdygtige alder (fx bruger statistikbureauer typisk 15–64 år). Begrebet opstod først med lønarbejde og industrialisering i 1800-tallet — før da var 'arbejdsløshed' ikke et meningsfuldt statistisk begreb. I spillet afspejler værdien, hvor godt forvaltningen fungerer, og om kompetenceniveauet er tilstrækkeligt.", unit: "%" },
+      pollution: { name: "Forurening", infoTitle: "Forureningsindeks", infoText: "I virkeligheden måles luftforurening bl.a. som partikelkoncentration (PM2,5), CO2-udledning per indbygger og luftkvalitetsindeks. Industrialiseringen i 1800-tallet bragte de første betydelige udledninger, og miljøbevidsthed startede først i anden halvdel af 1900-tallet. I spillet stiger værdien, når der investeres i industri, og falder med forskning (renere teknologi). Lavere er bedre.", unit: " idx" },
+      gdpPerCapita: { name: "BNP / indbygger", infoTitle: "Bruttonationalprodukt per indbygger", infoText: "I virkeligheden beregnes BNP på tre måder, der i teorien stemmer overens: produktionsbaseret (værditilvækst), indkomstbaseret (løn + overskud) eller udgiftsbaseret (forbrug + investeringer + eksport − import). Nationalregnskabet blev først formaliseret i 1930'erne-40'erne (Simon Kuznets, Nobelpris 1971). I spillet er tallet en abstrakt kombination af produktion og teknologi, ikke en reel valuta.", unit: " enh./pers." },
+      crimeRate: { name: "Kriminalitet", infoTitle: "Kriminalitetsrate", infoText: "I virkeligheden måles kriminalitet som anmeldte forbrydelser per 100.000 indbyggere, men statistikken lider under, at anmeldelsestærsklen varierer over tid og sted. Systematisk kriminalstatistik og kriminologi som fagområde opstod med byudviklingen i 1800-tallet. I spillet stiger værdien ved svag forvaltning og lav sammenhængskraft. Lavere er bedre.", unit: " /100.000" },
+      happiness: { name: "Lykkeindeks", infoTitle: "Lykkeindeks", infoText: "I virkeligheden bygger fx FN's World Happiness Report på spørgeundersøgelser, hvor folk vurderer eget liv på en skala fra 0–10, kombineret med forklarende faktorer som BNP, social støtte og sundhed. Rapporten blev første gang udgivet i 2012. I spillet kombinerer indekset sundhed, sammenhængskraft, moral, velstand og kriminalitet til ét tal fra 0–10.", unit: " /10" },
+    },
+    farmModes: {
+      pientila: { name: "Småbrug", desc: "Traditionelt, stabilt, men beskedent udbytte." },
+      suurtila: { name: "Storbrug", desc: "Mekaniserede storbrug: mere udbytte per landmand, men mere sårbart over for forstyrrelser og belaster miljøet mere." },
+      bio: { name: "Økologisk landbrug", desc: "Økologiske metoder: mindre udbytte, men bedre modstandsdygtighed og et renere miljø." },
+      erikois: { name: "Specialafgrøder", desc: "Dyre specialvarer (vin, krydderier, luksusvarer): mindre basisføde, men mere velstand." },
+    },
+    eduModes: {
+      perus: { name: "Grundskoleundervisning", desc: "Bred grunduddannelse til alle — stabil, jævn uddannelsesdækning." },
+      ammatillinen: { name: "Erhvervsuddannelse", desc: "Praktiske faglige kompetencer — forbedrer produktionseffektiviteten, men øger ikke forskningen lige så meget." },
+      korkeakoulu: { name: "Videregående uddannelse", desc: "Universiteter og forskningsinstitutioner — øger forskningen markant, men når en mindre del af befolkningen." },
+    },
+    sectors: {
+      farm: { name: "Landbrug" }, health: { name: "Sundhed" }, edu: { name: "Uddannelse" }, industry: { name: "Industri & byggeri" },
+      research: { name: "Forskning" }, religion: { name: "Religion & åndelighed" }, arts: { name: "Kunst & kultur" }, admin: { name: "Forvaltning & retsvæsen" }, services: { name: "Service & omsorg" },
+    },
+    events: {
+      kato: { name: "Misvækst", desc: "Frost tog høsten. Fødevareproduktion −40% denne runde." },
+      hyvasato: { name: "Rig Høst", desc: "Gunstigt vejr. Fødevareproduktion +30%." },
+      epidemia: { name: "Epidemi", desc: "En sygdom breder sig. Sundhedsvæsenet afgør, hvor mange der overlever." },
+      muutto: { name: "Vandrende Nybyggere", desc: "På trods af isolationen slutter en lille gruppe sig til fællesskabet (+3% befolkning)." },
+      rauha: { name: "En Fredelig Periode", desc: "Der skete ikke noget særligt. Livet går videre." },
+      tulipalo: { name: "Storbrand", desc: "Lagrene brændte. Fødevarelageret blev halveret." },
+      syntyvyys: { name: "Babyboom", desc: "De gode tider viser sig i vuggerne. Fødselsraten +30% denne runde." },
+      nalkavuodet_fi: { name: "De store hungerår 1866–68", desc: "Tre kolde somre i træk. Høsten slår fejl mange steder." },
+      sisallissota_fi: { name: "Borgerkrigen 1918", desc: "Samfundet splittes i to — økonomien og lagrene lider under urolighederne." },
+      talvisota_fi: { name: "Vinterkrigen", desc: "Der kæmpes med sejhed mod en langt stærkere fjende. Ressourcer går til krig frem for forskning." },
+      nokia_fi: { name: "Nokias opgang", desc: "Fra gummiindustri til mobiltelefoner — en teknologisk eksportsucces." },
+      eu_fi: { name: "EU-medlemskab 1995", desc: "Tilslutning til EU åbner markeder og skaber stabilitet." },
+      suurvalta_se: { name: "Stormagtstiden", desc: "Militær og administrativ magt vokser omkring Østersøen." },
+      emigraatio_se: { name: "Udvandring til Amerika", desc: "Sult og trange kår driver store mængder til at udvandre over havet." },
+      folkhemmet_se: { name: "Folkhemmet — folkehjemmet", desc: "Bred social sikkerhed og lighed opbygges systematisk." },
+      oljy_no: { name: "Oliefund i Nordsøen", desc: "1969: et enormt fund af olie- og gasreserver i Nordsøen." },
+      itsenaisyys_no: { name: "Løsrivelse fra Sverige 1905", desc: "En fredelig adskillelse skaber egen stat." },
+      kalastus_no: { name: "Fiskeri og søfart", desc: "En lang kystlinje og fiskerige farvande føder folket." },
+      osuuskunnat_dk: { name: "Landbrugsandelsforeninger", desc: "Små landmænd samler kræfterne — eksportlandbruget blomstrer." },
+      miehitys_dk: { name: "Tysk besættelse 1940–45", desc: "Krigstiden belaster økonomien og lagrene." },
+      tuulivoima_dk: { name: "Velfærdsmodel og vindkraft", desc: "Vedvarende energi og stærk social sikkerhed opbygger et omdømme." },
+      vallankumous_fr: { name: "Den Franske Revolution 1789", desc: "Den gamle orden falder — økonomien vakler i omvæltningen." },
+      siirtomaat_fr: { name: "Kolonimagt", desc: "Et stort koloninetværk bringer ressourcer og velstand." },
+      ydinvoima_fr: { name: "Atomkraft og teknologi", desc: "Et ambitiøst atomkraftprogram øger energiselvforsyningen." },
+      yhdistyminen_de: { name: "Samlingen 1871", desc: "Splittede fyrstendømmer forenes til en magtfuld stat." },
+      jalleenrakennus_de: { name: "Krigens ødelæggelser og genopbygning", desc: "Tunge tab, men hurtig genrejsning følger." },
+      talousihme_de: { name: "Det økonomiske mirakel (Wirtschaftswunder)", desc: "Hurtig genopbygning og industriel genrejsning efter krigen." },
+      teollinen_gb: { name: "Foregangsland i den industrielle revolution", desc: "Dampmaskinen og fabrikkerne forandrer hele samfundet som det første i verden." },
+      imperiumi_gb: { name: "Imperium og verdenshandel", desc: "Et stort imperium bringer ressourcer og markeder fra alle kontinenter." },
+      sodat_gb: { name: "Verdenskrigene", desc: "To verdenskrige belaster økonomien og fødevareforsyningen tungt." },
+    },
+    nations: {
+      suomi: { name: "Finland", trait: "Sisu og velfærdsstaten" },
+      ruotsi: { name: "Sverige", trait: "Arven fra stormagtstiden" },
+      norja: { name: "Norge", trait: "Oliervelstand og søfart" },
+      tanska: { name: "Danmark", trait: "Landbrugsandelsforeninger" },
+      ranska: { name: "Frankrig", trait: "Revolution og oplysning" },
+      saksa: { name: "Tyskland", trait: "Industriel stormagt" },
+      englanti: { name: "Storbritannien", trait: "Foregangsland i den industrielle revolution" },
+    },
+    facts: [
+      "Før industrialiseringen arbejdede 80–90% af verdens befolkning i landbruget. I dag er andelen under 2% i rige lande.",
+      "I England i 1381 arbejdede omkring 78% af de voksne mænd i landbruget. I 1911 var andelen faldet til 11%.",
+      "Den demografiske overgang betyder, at når et samfund udvikler sig, falder dødeligheden først, og først senere fødselsraten — i mellemperioden vokser befolkningen hurtigt. Dette skete i Finland i 1800–1900-tallet.",
+      "I førindustrielle samfund døde op til en fjerdedel af børnene inden for deres første leveår, og næsten halvdelen inden voksenalderen. Derfor var fødselsraten også høj: 5–7 børn per kvinde.",
+      "I Finlands hungerår 1866–1868 døde anslået 150.000–270.000 mennesker, cirka 8–9% af befolkningen — en af Europas sidste store hungersnød i fredstid.",
+      "Historikeren Arnold Toynbee klassificerede 21–28 civilisationer i verdenshistorien. Oswald Spengler talte otte, Carroll Quigley 24 — der er ingen enighed om definitionen.",
+      "Ifølge antropolog Robin Dunbar kan mennesker opretholde omkring 150 meningsfulde relationer. Større fællesskaber har brug for fælles fortællinger, religioner og institutioner for at holde sammen.",
+      "Forsørgerbrøken angiver, hvor mange børn og ældre der er per hundrede i den arbejdsdygtige alder. Finlands er en af Europas svageste på grund af en aldrende befolkning.",
+      "Den sorte død (1347–1351) menes at have dræbt 30–60% af Europas befolkning. Arbejdskraftmanglen hævede de overlevendes løn og brød det feudale system ned.",
+      "Inkaerne opbevarede mad i deres qollqa-lagre til op mod 3–7 års behov — statslig katastrofeberedskab var imperiets rygrad.",
+      "Bogtrykkerkunstens udbredelse fra 1450'erne halverede prisen på bøger og mangedoblede hastigheden, hvormed viden spredte sig — det anses for en af forudsætningerne for industrialiseringen.",
+      "Ifølge FN's skøn var jordens befolkning omkring 8,2 milliarder i 2025. Så sent som i 1800 var vi omkring en milliard.",
+      "Specialisering kræver et befolkningsgrundlag: et moderne hospital med specialafdelinger kræver mindst omkring 100.000–200.000 indbyggere for at fungere effektivt.",
+      "Romerrigets akvædukter bragte hundredtusindvis af kubikmeter vand ind i byen hver dag — rent vand var oldtidens mest effektive 'sundhedsvæsen'.",
+    ],
+    modLabels: {
+      farm: (v) => `Fødevareproduktion ${v > 1 ? "+" : ""}${Math.round((v - 1) * 100)}%`,
+      research: (v) => `Forskning ${v > 1 ? "+" : ""}${Math.round((v - 1) * 100)}%`,
+      birth: (v) => `Fødselsrate ${v > 1 ? "+" : ""}${Math.round((v - 1) * 100)}%`,
+      health: (v) => `Sundhed ${v > 0 ? "+" : ""}${Math.round(v * 100)} point`,
+      resilience: (v) => (v < 1 ? `Katastrofer ${Math.round((1 - v) * 100)}% mildere` : `Katastrofer ${Math.round((v - 1) * 100)}% hårdere`),
+      minPop: (v) => `Tidsalderens befolkningskrav ${Math.round((v - 1) * 100)}%`,
+      store: (v) => `Lagerkapacitet ${v > 1 ? "+" : ""}${Math.round((v - 1) * 100)}%`,
+    },
+  },
+};
+
+// ============ KIELIVALINTA (i18n) ============
+// Peli tukee useita kieliä. Suomi (fi) on perussisältö (ERAS, CIVS, EVENTS jne. yllä) ja toimii
+// aina varajärjestelmänä (fallback), jos jokin merkkijono puuttuu käännöksestä. I18N sisältää
+// muiden kielten käännökset samoilla avaimilla (key/id/indeksi) kuin perussisältö, ja UI_STRINGS
+// kattaa kiinteän käyttöliittymätekstin (painikkeet, otsikot, työkaluvihjeet). T()/U()-apufunktiot
+// hakevat käännöksen, tai palaavat suomenkieliseen versioon jos käännös puuttuu.
+const LOCALES = ["fi", "en", "da"];
+const LOCALE_NAMES = { fi: "Suomi", en: "English", da: "Dansk" };
+
+function T(lang, table, key, field, fb) {
+  return I18N[lang] && I18N[lang][table] && I18N[lang][table][key] && I18N[lang][table][key][field] !== undefined
+    ? I18N[lang][table][key][field] : fb;
+}
+function TE(lang, eraIdx, field, fb) {
+  return I18N[lang] && I18N[lang].eras && I18N[lang].eras[eraIdx] && I18N[lang].eras[eraIdx][field] !== undefined
+    ? I18N[lang].eras[eraIdx][field] : fb;
+}
+function TRole(lang, eraIdx, roleKey, fb) {
+  return I18N[lang] && I18N[lang].eras && I18N[lang].eras[eraIdx] && I18N[lang].eras[eraIdx].roles && I18N[lang].eras[eraIdx].roles[roleKey] !== undefined
+    ? I18N[lang].eras[eraIdx].roles[roleKey] : fb;
+}
+function TInv(lang, eraIdx, idx, field, fb) {
+  return I18N[lang] && I18N[lang].inventions && I18N[lang].inventions[eraIdx] && I18N[lang].inventions[eraIdx][idx] && I18N[lang].inventions[eraIdx][idx][field] !== undefined
+    ? I18N[lang].inventions[eraIdx][idx][field] : fb;
+}
+function TFact(lang, idx, fb) {
+  return I18N[lang] && I18N[lang].facts && I18N[lang].facts[idx] !== undefined ? I18N[lang].facts[idx] : fb;
+}
+function TVoice(lang, eraIdx, fb) {
+  return I18N[lang] && I18N[lang].storyLabels && I18N[lang].storyLabels[eraIdx] !== undefined ? I18N[lang].storyLabels[eraIdx] : fb;
+}
+function U(lang, key) {
+  const v = UI_STRINGS[lang] && UI_STRINGS[lang][key];
+  return v !== undefined ? v : UI_STRINGS.fi[key];
+}
+function modLabel(lang, k, v) {
+  const f = (I18N[lang] && I18N[lang].modLabels && I18N[lang].modLabels[k]) || MOD_LABELS[k];
+  return f(v);
+}
+
+// ============ UI_STRINGS: kiinteä käyttöliittymäteksti ============
+const UI_STRINGS = {
+  fi: {
+    appTitle: "YHTEISKUNTA",
+    appTagline: "Society · 10 000 ihmistä. Ei tuontia. Ei vientiä. Kuinka pitkälle pääsette?",
+    civIndexLabel: "Sivilisaatioindeksi",
+    eraYearLabel: (era, year) => `${era} aikakausi · Vuosi ${year}`,
+    chooseCivIntro: "Valitse sivilisaatiosi. Kullakin on historiaan perustuvat vahvuudet — ja heikkoudet.",
+    civFootnote: "20 sivilisaatiota Arnold Toynbeen klassisen luokittelun hengessä. Historioitsijat eivät ole yksimielisiä sivilisaatioiden määrästä: Spengler laski 8, Toynbee 21–28, Quigley 24.",
+    changeCiv: "◂ Vaihda sivilisaatio",
+    nameYourVillage: (civ) => `${civ} — nimeä kylläsi`,
+    villageNamePlaceholder: "Kylän nimi (valinnainen)",
+    villageNameHint: "Nimi näkyy tarinassa ja historianäkymässä — hyvä nimi tekee myöhemmästä esittelystä muille hauskemman.",
+    chooseTwoSkills: "Valitse kaksi aloitustaitoa",
+    chosenSkillsHint: (n) => `Nämä ovat pieniä pysyviä bonuksia koko peliajaksi — valitse ne, jotka sopivat suunnittelemaasi strategiaan. (${n}/2 valittu)`,
+    startBtn: "Perusta kylä ja aloita ▸",
+    statPop: "Väkiluku", statFood: "Ruokavarasto", statBalance: "Tase", statResearch: "Tutkimus", statLife: "Elinajanodote",
+    statHealth: "Terveys", statCommunity: "Yhteisö", statTopEra: "Huippu saavutettu",
+    statHealthSub: (edu, care) => `Koul. ${edu} % · Hoiva ${care} %`, statCommunitySub: (morale) => `Moraali ${morale} %`,
+    pyramidBtn: (age) => `👪 Keski-ikä ${age} v · Väestön jakauma ▸`,
+    govBtn: (name) => `${name} · Hallintomuoto ▸`,
+    metricsBtn: "📈 Yhteiskuntamittarit ▸",
+    historyBtn: "📖 Historia ja esittely ▸",
+    nationTag: "· kansallisvaltio",
+    formNationBtn: "🏳️ Muodosta kansallisvaltio ▸",
+    nationModalTitle: "🏳️ Muodosta kansallisvaltio",
+    nationModalIntro: (civ) => `${civ} voi jatkaa yhtenä historiallisista kansallisvaltioistaan. Kukin tuo oman tapahtumakirjonsa perussimulaation päälle. Peruspeli pysyy täysin pelattavana ilman näitä — tämä on valinnainen syvennys.`,
+    nationEventsLabel: (n, list) => `${n} omaa historiallista tapahtumaa: ${list}`,
+    continueAsNation: (name) => `Jatka ${name}na ▸`,
+    buyNation: (price) => `Osta ${price} (demo) 🔓`,
+    buyingNation: "Käsitellään…",
+    nationDemoNote: "Demo-osto: tallentuu vain tähän selaimeen, ei oikeaa veloitusta. Oikeassa julkaisussa tämä kytkettäisiin sovelluskaupan maksuun.",
+    metricsModalTitle: "📈 Yhteiskuntamittarit",
+    metricsModalIntro: "Mittarit mukailevat oikeita yhteiskuntatieteen tunnuslukuja ja avautuvat sitä mukaa kun vastaava mittausmenetelmä syntyi historiassa. Kunkin ℹ️ kertoo, miten oikea mittari lasketaan.",
+    metricLocked: (era) => `🔒 Avautuu aikakaudella: ${era}`,
+    historyModalTitle: (village) => village ? `📖 ${village}n historia` : "📖 Yhteisöni historia",
+    historyModalIntro: "Tämä näkymä kokoaa yhteisösi koko tarinan — hyvä pohja esitellä muille, mitä valintoja teit ja miksi.",
+    startSkillsLabel: (list) => `Aloitustaidot: ${list}`,
+    nowSummary: (year, era, pop, gov) => `Nyt: vuosi ${year} · ${era} · ${pop} asukasta · ${gov}`,
+    timelineLabel: "Aikajana — keskeiset käännekohdat",
+    indexNowLabel: (score) => `Sivilisaatioindeksi nyt: ${score}`,
+    reflectionTitle: "💡 Pohdittavaksi esittelyä varten:",
+    reflectionQ1: "Mikä valinta (hallintomuoto, erikoistuminen, tuotantosuunta) vaikutti eniten yhteiskuntasi kehitykseen?",
+    reflectionQ2: "Mikä historiallinen tapahtuma yllätti sinut eniten? Miten reagoit siihen?",
+    reflectionQ3: "Jos aloittaisit uudelleen, minkä valinnan tekisit toisin — ja miksi?",
+    reflectionQ4: "Mitä yhtäläisyyksiä näet oman yhteiskuntasi ja oikean historian välillä?",
+    notesLabel: "Omat huomiosi (näkyy vain sinulle, tällä laitteella)",
+    notesPlaceholder: "Kirjoita tähän ajatuksiasi esittelyä varten...",
+    copyBtn: "📋 Kopioi teksti esitystä varten",
+    copiedBtn: "✓ Kopioitu!",
+    closeBtn: "Sulje ✕",
+    pyramidModalTitle: "👪 Väestön jakauma",
+    avgAgeLabel: "Keski-ikä", depRatioLabel: "Huoltosuhde", depRatioNote: "lasta+vanhusta / 100 työikäistä",
+    pyramidChildren: "👶 Lapset", pyramidWorkers: "💪 Työikäiset", pyramidElderly: "👴 Vanhukset",
+    eraLabel: (era, role) => `${era}: ${role}`,
+    govModalTitle: "🏛️ Hallintomuoto", govModalIntro: "Itsevaltaisilta hallinnoilta puuttuu legitimiteetti — ne tuottavat tehokkaasti mutta kaatuvat herkästi, jos kansa on tyytymätön. Demokratia ja tasavalta ovat hitaampia mutta vakaampia. Teokratia on oma haaransa: vahva yhteisöllisyys, hitaampi tiede.",
+    govCurrent: "· nykyinen",
+    govStatLine: (r, c, a, u) => `Tutkimus ×${r} · Yhteisöllisyys ×${c} · Hallintoteho ×${a} · Levottomuusriski ${u} %`,
+    govLocked: (req) => `🔒 ${req}`,
+    govReqEra: (era) => `aikakausi ≥ ${era}`,
+    govReqEdu: (v) => `koulutuskattavuus ≥ ${v} %`,
+    govReqAdmin: (v) => `hallintokattavuus ≥ ${v} %`,
+    govReqCohesion: (v) => `yhteisöllisyys ≥ ${v} %`,
+    govUnlockedFromStart: "Avoinna alusta asti",
+    skillGapWarning: (era, pop, pct) => `⚠️ Osaamispula: ${era} aikakausi vaatisi vähintään ${pop} ihmistä täyteen erikoistumiseen. Tuottavuus nyt ${pct} %.`,
+    skillGapLabel: "Osaamispula:",
+    reportPreview: (period) => `📜 Kertomus vuosilta ${period}`,
+    reportPreviewSub: (eventName) => `— ${eventName} · lue tarina ▸`,
+    didYouKnow: "💡 Tiesitkö?",
+    yearByYearLabel: "Vuosi vuodelta",
+    yearByYearNote: "★ = tapahtuma, joka todella vaikutti tämän jakson laskelmiin",
+    showNumbers: "Näytä luvut ▸",
+    reportBorn: "Syntyneet", reportDied: "Kuolleet", reportDiedChildren: "  joista lapsia", reportDiedWorkers: "  työikäisiä", reportDiedElderly: "  vanhuksia",
+    reportGrownUp: "Aikuistuneet", reportEducated: "  joista koulutettuja", reportRetired: "Eläköityneet", reportLeft: "Poismuuttaneet", reportArrived: "Saapuneet",
+    reportFoodProdNeed: "Ruokaa tuotettu / tarve", reportResearchGained: "Tutkimusta kertyi", reportPopChange: "Väestömuutos",
+    summaryTitle: "YHTEISKUNTANI HISTORIA", summaryUnnamedCommunity: "Nimeämätön yhteisö", summaryVillageLabel: (name) => `Kylä: ${name}`,
+    summaryLine: (year, era, pop, gov) => `Vuosi ${year} · Aikakausi: ${era} · Väestö: ${pop} · Hallintomuoto: ${gov}`,
+    summaryTimelineHeader: "AIKAJANA:", summaryIndexHeader: (score) => `SIVILISAATIOINDEKSI: ${score}`, summaryNotesHeader: (notes) => `OMAT HUOMIONI:\n${notes}`,
+    summaryStartSkills: (list) => `Aloitustaidot: ${list}`,
+    "Väestö": "Väestö", "Teknologia": "Teknologia", "Terveys & sivistys": "Terveys & sivistys", "Henki & yhteisöllisyys": "Henki & yhteisöllisyys",
+    "Hallinto & hoiva": "Hallinto & hoiva", "Vauraus": "Vauraus", "Yhteiskuntamittarit": "Yhteiskuntamittarit", "Kestävyys": "Kestävyys",
+    workforceTitle: "Työvoiman jako",
+    workforceRules: "Työnjaon säännöt",
+    workforceRulesText: "Lisätty työvoima otetaan aina suurimmasta sektorista (yleensä pelloilta), ja vapautettu palaa sinne — summa on aina 100 %.",
+    personsUnit: "hlö",
+    farmModeLabel: "🚜 Maatalouden suuntaus",
+    farmModeInfoTitle: "Maatalouden suuntaus",
+    farmModeInfoText: "Pienviljely on tasainen ja saatavilla heti. Suurtilat (Teollisesta) nostavat satoa mutta lisäävät saasteita ja herkkyyttä häiriöille. Bioviljely (Modernista) on kestävää ja puhdasta, mutta tuottaa vähemmän. Erikoistuotteet (Teollisesta) tuovat vaurautta ruokaturvan kustannuksella.",
+    healthLockedEarly: "🔒 Terveydenhuollon säädöt avautuvat Varhaisteollisesta aikakaudesta.",
+    healthFocusLabel: "🏥 Ehkäisevä ↔ Sairaalapainotteinen",
+    healthFocusInfoTitle: "Ehkäisevä vs sairaalapainotteinen hoito",
+    healthFocusInfoText: "Ehkäisevä painotus (arvo lähellä 0 %) suojaa erityisesti lapsia ja hillitsee epidemioita. Sairaalapainotteinen hoito (arvo lähellä 100 %) pelastaa paremmin aikuisia ja vanhuksia akuuteissa tilanteissa. Kumpikaan ei ole ylivoimainen — valinta riippuu siitä, minkä ikäryhmän suojelu on juuri nyt tärkeintä.",
+    specialistLockedEarly: "🔒 Erikoislääkärit avautuvat Teollisesta aikakaudesta.",
+    specialistLabel: "🩺 Erikoislääkärien osuus",
+    specialistInfoTitle: "Erikoislääkärien osuus",
+    specialistInfoText: "Erikoislääkäri kattaa 1,4× yleislääkärin verran — vaativampi koulutuspolku, mutta parempi hoitotulos raskaammissa tapauksissa.",
+    researchLockedEarly: "🔒 Tutkimuksen suuntaaminen avautuu Varhaisteollisesta aikakaudesta.",
+    appliedLabel: "🔬 Perustutkimus ↔ Soveltava tutkimus",
+    appliedInfoTitle: "Perustutkimus vs soveltava tutkimus",
+    appliedInfoText: "Soveltava tutkimus (arvo lähellä 100 %) nostaa tuotannon tehokkuutta heti, mutta hidastaa tutkimuspisteiden kertymistä jopa 40 %. Perustutkimus (arvo lähellä 0 %) on hitaampaa hyödyntää mutta vie aikakautta eteenpäin nopeimmin.",
+    eduModeLabel: "🎒 Opetuksen suuntaus",
+    eduModeInfoTitle: "Opetuksen suuntaus",
+    eduModeInfoText: "Peruskoulutus on tasainen ja avoinna heti. Ammatillinen koulutus (Varhaisteollisesta) nostaa tuotannon tehokkuutta. Korkeakoulutus (Teollisesta) nostaa tutkimusta merkittävästi, mutta tavoittaa harvemman.",
+    adminLockedEarly: "🔒 Rikostutkijat avautuvat Teollisesta aikakaudesta.",
+    detectiveLabel: "🕵️ Rikostutkijoiden osuus",
+    detectiveInfoTitle: "Rikostutkijat",
+    detectiveInfoText: "Rikostutkijoihin erikoistuva osa hallinnosta laskee rikollisuutta suoraan (jopa −35 % täydellä osuudella), mutta vie resursseja yleisestä hallintokattavuudesta (−15 % täydellä osuudella).",
+    industryLockedEarly: "🔒 Teollisuuden suuntaaminen avautuu Varhaisteollisesta aikakaudesta.",
+    industryLabel: "⚙️ Perustuotanto ↔ Erikoistunut teollisuus",
+    industryInfoTitle: "Perustuotanto vs erikoistunut teollisuus",
+    industryInfoText: "Erikoistunut teollisuus (arvo lähellä 100 %) nostaa tehokkuutta, tutkimusta ja BKT:ta, mutta saastuttaa selvästi enemmän kuin perustuotanto.",
+    professionsTitle: "Ammattijakauma",
+    outsideWorkforce: "Työvoiman ulkopuolella (lapset & vanhukset)",
+    eraBackground: "Aikakauden tausta",
+    nextTurnBtn: "Etene 5 vuotta →",
+    populationChartTitle: "Väestökehitys",
+    logTitle: "Aikakirjat",
+    yearAxisLabel: (y) => "Vuosi " + y,
+    civilizationWins: "Sivilisaatio kukoistaa",
+    civilizationCollapsed: "Yhteisö romahti",
+    leaderboardTitle: "🏆 Yhteinen tulostaulu",
+    leaderboardNamePlaceholder: "Nimesi tulostaululle",
+    saveBtn: "Tallenna",
+    scoreSaved: "✓ Tulos tallennettu!",
+    leaderboardVisibility: "Nimi ja tulos näkyvät kaikille tämän pelin pelaajille.",
+    leaderboardWin: "· voitto",
+    leaderboardEmpty: "Ole ensimmäinen tulostaululla!",
+    peakPopLine: (peak, years) => `Väestöhuippu: ${peak} · Vuosia: ${years}`,
+    restartBtn: "Valitse uusi sivilisaatio ↺",
+    footerNote: "Malli on karkea yksinkertaistus — mutta suhdeluvut (viljelijän tuottavuus, 1,8 % terveydenhuoltoon, 1 opettaja / 20 lasta) pohjaavat historiallisiin arvioihin.",
+    infoBtnAria: "Lisätietoa",
+    langSwitcherAria: "Vaihda kieli",
+    profFarmName: "Viljelijät ja karjanhoitajat", profFarmNote: (n) => `1 ruokkii ${n}`,
+    profHealthName: "Lääkärit (~10 %) ja hoitajat", profHealthNote: "tavoite 1,8 % väestöstä",
+    profEduName: "Opettajat ja kasvattajat", profEduNote: "1 / 20 lasta",
+    profIndustryName: "Sepät, rakentajat, teollisuus", profIndustryNote: "työkalut & infra",
+    profResearchName: "Tutkijat ja keksijät", profResearchNote: "vie aikakautta eteenpäin",
+    profReligionName: "Papit ja hengelliset johtajat", profReligionNote: "koheesio: tavoite 0,6 % väestöstä",
+    profArtsName: "Taiteilijat, muusikot, tarinankertojat", profArtsNote: "moraali: tavoite 0,5 % väestöstä",
+    profAdminName: "Virkamiehet, tuomarit, järjestyksenvalvojat", profAdminNote: "tehokkuus: tavoite 1,5 % väestöstä",
+    profServicesName: "Kauppiaat, hoivaajat, kuljettajat", profServicesNote: "hoiva: tavoite 3 % väestöstä",
+  },
+  en: {
+    appTitle: "SOCIETY",
+    appTagline: "Society · 10,000 people. No imports. No exports. How far can you get?",
+    civIndexLabel: "Civilization Index",
+    eraYearLabel: (era, year) => `${era} era · Year ${year}`,
+    chooseCivIntro: "Choose your civilization. Each has strengths — and weaknesses — grounded in history.",
+    civFootnote: "20 civilizations in the spirit of Arnold Toynbee's classic typology. Historians disagree on the exact number of civilizations: Spengler counted 8, Toynbee 21–28, Quigley 24.",
+    changeCiv: "◂ Change civilization",
+    nameYourVillage: (civ) => `${civ} — name your village`,
+    villageNamePlaceholder: "Village name (optional)",
+    villageNameHint: "The name appears in the story and history view — a good name makes it more fun to present to others later.",
+    chooseTwoSkills: "Choose two starting skills",
+    chosenSkillsHint: (n) => `These are small permanent bonuses for the whole game — pick the ones that fit the strategy you're planning. (${n}/2 chosen)`,
+    startBtn: "Found village and begin ▸",
+    statPop: "Population", statFood: "Food Reserve", statBalance: "Balance", statResearch: "Research", statLife: "Life Expectancy",
+    statHealth: "Health", statCommunity: "Community", statTopEra: "Peak reached",
+    statHealthSub: (edu, care) => `Edu. ${edu}% · Care ${care}%`, statCommunitySub: (morale) => `Morale ${morale}%`,
+    pyramidBtn: (age) => `👪 Avg. age ${age} y · Population breakdown ▸`,
+    govBtn: (name) => `${name} · Government ▸`,
+    metricsBtn: "📈 Society metrics ▸",
+    historyBtn: "📖 History & presentation ▸",
+    nationTag: "· nation-state",
+    formNationBtn: "🏳️ Form a nation-state ▸",
+    nationModalTitle: "🏳️ Form a nation-state",
+    nationModalIntro: (civ) => `${civ} can continue as one of its historical nation-states. Each brings its own pool of events on top of the base simulation. The base game remains fully playable without these — this is an optional expansion.`,
+    nationEventsLabel: (n, list) => `${n} own historical events: ${list}`,
+    continueAsNation: (name) => `Continue as ${name} ▸`,
+    buyNation: (price) => `Buy ${price} (demo) 🔓`,
+    buyingNation: "Processing…",
+    nationDemoNote: "Demo purchase: saved only to this browser, no real charge. In a real release this would connect to app store payment.",
+    metricsModalTitle: "📈 Society metrics",
+    metricsModalIntro: "These metrics mirror real social-science indicators and unlock as the corresponding measurement method emerged in history. Each ℹ️ explains how the real metric is calculated.",
+    metricLocked: (era) => `🔒 Unlocks in the ${era} era`,
+    historyModalTitle: (village) => village ? `📖 History of ${village}` : "📖 My community's history",
+    historyModalIntro: "This view gathers your community's whole story — a good basis for presenting to others what choices you made and why.",
+    startSkillsLabel: (list) => `Starting skills: ${list}`,
+    nowSummary: (year, era, pop, gov) => `Now: year ${year} · ${era} · ${pop} inhabitants · ${gov}`,
+    timelineLabel: "Timeline — key turning points",
+    indexNowLabel: (score) => `Civilization Index now: ${score}`,
+    reflectionTitle: "💡 To consider for your presentation:",
+    reflectionQ1: "Which choice (government, specialization, production focus) most affected your society's development?",
+    reflectionQ2: "Which historical event surprised you the most? How did you react to it?",
+    reflectionQ3: "If you started over, which choice would you make differently — and why?",
+    reflectionQ4: "What similarities do you see between your society and real history?",
+    notesLabel: "Your own notes (visible only to you, on this device)",
+    notesPlaceholder: "Write your thoughts here for the presentation...",
+    copyBtn: "📋 Copy text for presentation",
+    copiedBtn: "✓ Copied!",
+    closeBtn: "Close ✕",
+    pyramidModalTitle: "👪 Population breakdown",
+    avgAgeLabel: "Average age", depRatioLabel: "Dependency ratio", depRatioNote: "children+elderly / 100 working-age",
+    pyramidChildren: "👶 Children", pyramidWorkers: "💪 Working age", pyramidElderly: "👴 Elderly",
+    eraLabel: (era, role) => `${era}: ${role}`,
+    govModalTitle: "🏛️ Government", govModalIntro: "Autocratic governments lack legitimacy — they're efficient but fall easily if the people are unhappy. Democracy and republics are slower but more stable. Theocracy is its own branch: strong cohesion, slower science.",
+    govCurrent: "· current",
+    govStatLine: (r, c, a, u) => `Research ×${r} · Cohesion ×${c} · Admin efficiency ×${a} · Unrest risk ${u}%`,
+    govLocked: (req) => `🔒 ${req}`,
+    govReqEra: (era) => `era ≥ ${era}`,
+    govReqEdu: (v) => `education coverage ≥ ${v}%`,
+    govReqAdmin: (v) => `admin coverage ≥ ${v}%`,
+    govReqCohesion: (v) => `cohesion ≥ ${v}%`,
+    govUnlockedFromStart: "Open from the start",
+    skillGapWarning: (era, pop, pct) => `⚠️ Skill shortage: the ${era} era needs at least ${pop} people for full specialization. Productivity now ${pct}%.`,
+    skillGapLabel: "Skill shortage:",
+    reportPreview: (period) => `📜 Chronicle of ${period}`,
+    reportPreviewSub: (eventName) => `— ${eventName} · read the story ▸`,
+    didYouKnow: "💡 Did you know?",
+    yearByYearLabel: "Year by year",
+    yearByYearNote: "★ = the event that actually affected this period's calculations",
+    showNumbers: "Show numbers ▸",
+    reportBorn: "Born", reportDied: "Died", reportDiedChildren: "  of which children", reportDiedWorkers: "  working-age", reportDiedElderly: "  elderly",
+    reportGrownUp: "Came of age", reportEducated: "  of which educated", reportRetired: "Retired", reportLeft: "Emigrated", reportArrived: "Arrived",
+    reportFoodProdNeed: "Food produced / needed", reportResearchGained: "Research gained", reportPopChange: "Population change",
+    summaryTitle: "MY SOCIETY'S HISTORY", summaryUnnamedCommunity: "Unnamed community", summaryVillageLabel: (name) => `Village: ${name}`,
+    summaryLine: (year, era, pop, gov) => `Year ${year} · Era: ${era} · Population: ${pop} · Government: ${gov}`,
+    summaryTimelineHeader: "TIMELINE:", summaryIndexHeader: (score) => `CIVILIZATION INDEX: ${score}`, summaryNotesHeader: (notes) => `MY NOTES:\n${notes}`,
+    summaryStartSkills: (list) => `Starting skills: ${list}`,
+    "Väestö": "Population", "Teknologia": "Technology", "Terveys & sivistys": "Health & education", "Henki & yhteisöllisyys": "Spirit & cohesion",
+    "Hallinto & hoiva": "Administration & care", "Vauraus": "Wealth", "Yhteiskuntamittarit": "Society metrics", "Kestävyys": "Longevity",
+    workforceTitle: "Labor allocation",
+    workforceRules: "Allocation rules",
+    workforceRulesText: "Added labor is always taken from the largest sector (usually farming), and freed labor returns there — the total is always 100%.",
+    personsUnit: "people",
+    farmModeLabel: "🚜 Agricultural focus",
+    farmModeInfoTitle: "Agricultural focus",
+    farmModeInfoText: "Smallholding is steady and available from the start. Large farms (Industrial era) raise yield but increase pollution and vulnerability to disruption. Organic farming (Modern era) is sustainable and clean but yields less. Specialty crops (Industrial era) bring wealth at the cost of food security.",
+    healthLockedEarly: "🔒 Healthcare policy unlocks in the Early Industrial era.",
+    healthFocusLabel: "🏥 Preventive ↔ Hospital-focused",
+    healthFocusInfoTitle: "Preventive vs. hospital-focused care",
+    healthFocusInfoText: "A preventive focus (value near 0%) especially protects children and curbs epidemics. Hospital-focused care (value near 100%) better saves adults and the elderly in acute cases. Neither is strictly superior — the choice depends on which age group needs protection most right now.",
+    specialistLockedEarly: "🔒 Specialists unlock in the Industrial era.",
+    specialistLabel: "🩺 Share of specialists",
+    specialistInfoTitle: "Share of specialists",
+    specialistInfoText: "A specialist covers 1.4× as much as a general practitioner — a more demanding training path, but a better outcome in severe cases.",
+    researchLockedEarly: "🔒 Research focus unlocks in the Early Industrial era.",
+    appliedLabel: "🔬 Basic research ↔ Applied research",
+    appliedInfoTitle: "Basic vs. applied research",
+    appliedInfoText: "Applied research (value near 100%) raises production efficiency immediately but slows the accumulation of research points by up to 40%. Basic research (value near 0%) is slower to exploit but advances the era fastest.",
+    eduModeLabel: "🎒 Education focus",
+    eduModeInfoTitle: "Education focus",
+    eduModeInfoText: "Basic education is steady and available from the start. Vocational training (Early Industrial era) raises production efficiency. Higher education (Industrial era) raises research significantly but reaches fewer people.",
+    adminLockedEarly: "🔒 Detectives unlock in the Industrial era.",
+    detectiveLabel: "🕵️ Share of detectives",
+    detectiveInfoTitle: "Detectives",
+    detectiveInfoText: "The share of administration specializing in criminal investigation directly lowers crime (up to −35% at full share), but draws resources from general admin coverage (−15% at full share).",
+    industryLockedEarly: "🔒 Industrial focus unlocks in the Early Industrial era.",
+    industryLabel: "⚙️ Basic production ↔ Specialized industry",
+    industryInfoTitle: "Basic production vs. specialized industry",
+    industryInfoText: "Specialized industry (value near 100%) raises efficiency, research and GDP, but pollutes noticeably more than basic production.",
+    professionsTitle: "Occupational breakdown",
+    outsideWorkforce: "Outside the workforce (children & elderly)",
+    eraBackground: "Era background",
+    nextTurnBtn: "Advance 5 years →",
+    populationChartTitle: "Population trend",
+    logTitle: "Chronicles",
+    yearAxisLabel: (y) => "Year " + y,
+    civilizationWins: "Civilization thrives",
+    civilizationCollapsed: "The community collapsed",
+    leaderboardTitle: "🏆 Shared leaderboard",
+    leaderboardNamePlaceholder: "Your name for the leaderboard",
+    saveBtn: "Save",
+    scoreSaved: "✓ Score saved!",
+    leaderboardVisibility: "Your name and score are visible to everyone who plays this game.",
+    leaderboardWin: "· win",
+    leaderboardEmpty: "Be the first on the leaderboard!",
+    peakPopLine: (peak, years) => `Population peak: ${peak} · Years: ${years}`,
+    restartBtn: "Choose a new civilization ↺",
+    footerNote: "The model is a rough simplification — but the ratios (farmer productivity, 1.8% for healthcare, 1 teacher / 20 children) are based on historical estimates.",
+    infoBtnAria: "More information",
+    langSwitcherAria: "Change language",
+    profFarmName: "Farmers and herders", profFarmNote: (n) => `1 feeds ${n}`,
+    profHealthName: "Doctors (~10%) and nurses", profHealthNote: "target 1.8% of population",
+    profEduName: "Teachers and educators", profEduNote: "1 / 20 children",
+    profIndustryName: "Smiths, builders, industry", profIndustryNote: "tools & infrastructure",
+    profResearchName: "Researchers and inventors", profResearchNote: "advances the era",
+    profReligionName: "Priests and spiritual leaders", profReligionNote: "cohesion: target 0.6% of population",
+    profArtsName: "Artists, musicians, storytellers", profArtsNote: "morale: target 0.5% of population",
+    profAdminName: "Officials, judges, law enforcement", profAdminNote: "efficiency: target 1.5% of population",
+    profServicesName: "Merchants, caregivers, transporters", profServicesNote: "care: target 3% of population",
+  },
+  da: {
+    appTitle: "SAMFUND",
+    appTagline: "Society · 10.000 mennesker. Ingen import. Ingen eksport. Hvor langt kan I nå?",
+    civIndexLabel: "Civilisationsindeks",
+    eraYearLabel: (era, year) => `${era}tidsalder · År ${year}`,
+    chooseCivIntro: "Vælg din civilisation. Hver har historisk funderede styrker — og svagheder.",
+    civFootnote: "20 civilisationer i Arnold Toynbees klassiske ånd. Historikere er ikke enige om det præcise antal civilisationer: Spengler talte 8, Toynbee 21–28, Quigley 24.",
+    changeCiv: "◂ Skift civilisation",
+    nameYourVillage: (civ) => `${civ} — navngiv din landsby`,
+    villageNamePlaceholder: "Landsbyens navn (valgfrit)",
+    villageNameHint: "Navnet vises i fortællingen og historikvisningen — et godt navn gør en senere præsentation sjovere.",
+    chooseTwoSkills: "Vælg to startfærdigheder",
+    chosenSkillsHint: (n) => `Dette er små permanente bonusser for hele spillet — vælg dem der passer til den strategi, du planlægger. (${n}/2 valgt)`,
+    startBtn: "Grundlæg landsby og start ▸",
+    statPop: "Befolkning", statFood: "Fødevarelager", statBalance: "Balance", statResearch: "Forskning", statLife: "Middellevetid",
+    statHealth: "Sundhed", statCommunity: "Fællesskab", statTopEra: "Toppen nået",
+    statHealthSub: (edu, care) => `Udd. ${edu}% · Omsorg ${care}%`, statCommunitySub: (morale) => `Moral ${morale}%`,
+    pyramidBtn: (age) => `👪 Gnsn. alder ${age} år · Befolkningsfordeling ▸`,
+    govBtn: (name) => `${name} · Styreform ▸`,
+    metricsBtn: "📈 Samfundsmål ▸",
+    historyBtn: "📖 Historie og præsentation ▸",
+    nationTag: "· nationalstat",
+    formNationBtn: "🏳️ Dan en nationalstat ▸",
+    nationModalTitle: "🏳️ Dan en nationalstat",
+    nationModalIntro: (civ) => `${civ} kan fortsætte som en af sine historiske nationalstater. Hver bringer sin egen pulje af begivenheder oven på grundsimulationen. Grundspillet forbliver fuldt spilbart uden disse — dette er en valgfri udvidelse.`,
+    nationEventsLabel: (n, list) => `${n} egne historiske begivenheder: ${list}`,
+    continueAsNation: (name) => `Fortsæt som ${name} ▸`,
+    buyNation: (price) => `Køb ${price} (demo) 🔓`,
+    buyingNation: "Behandler…",
+    nationDemoNote: "Demokøb: gemmes kun i denne browser, ingen reel betaling. I en rigtig udgivelse ville dette kobles til betaling via en app-butik.",
+    metricsModalTitle: "📈 Samfundsmål",
+    metricsModalIntro: "Målene efterligner rigtige samfundsvidenskabelige nøgletal og låses op i takt med, at den tilsvarende målemetode opstod i historien. Hver ℹ️ forklarer, hvordan det rigtige mål beregnes.",
+    metricLocked: (era) => `🔒 Låses op i ${era}tidsalderen`,
+    historyModalTitle: (village) => village ? `📖 ${village}s historie` : "📖 Mit samfunds historie",
+    historyModalIntro: "Denne visning samler hele dit samfunds historie — et godt grundlag for at præsentere for andre, hvilke valg du traf og hvorfor.",
+    startSkillsLabel: (list) => `Startfærdigheder: ${list}`,
+    nowSummary: (year, era, pop, gov) => `Nu: år ${year} · ${era} · ${pop} indbyggere · ${gov}`,
+    timelineLabel: "Tidslinje — centrale vendepunkter",
+    indexNowLabel: (score) => `Civilisationsindeks nu: ${score}`,
+    reflectionTitle: "💡 At overveje til præsentationen:",
+    reflectionQ1: "Hvilket valg (styreform, specialisering, produktionsretning) påvirkede dit samfunds udvikling mest?",
+    reflectionQ2: "Hvilken historisk begivenhed overraskede dig mest? Hvordan reagerede du på den?",
+    reflectionQ3: "Hvis du startede forfra, hvilket valg ville du så træffe anderledes — og hvorfor?",
+    reflectionQ4: "Hvilke ligheder ser du mellem dit eget samfund og den virkelige historie?",
+    notesLabel: "Dine egne noter (kun synlige for dig, på denne enhed)",
+    notesPlaceholder: "Skriv dine tanker her til præsentationen...",
+    copyBtn: "📋 Kopiér tekst til præsentation",
+    copiedBtn: "✓ Kopieret!",
+    closeBtn: "Luk ✕",
+    pyramidModalTitle: "👪 Befolkningsfordeling",
+    avgAgeLabel: "Gennemsnitsalder", depRatioLabel: "Forsørgerbrøk", depRatioNote: "børn+ældre / 100 i den arbejdsdygtige alder",
+    pyramidChildren: "👶 Børn", pyramidWorkers: "💪 Arbejdsdygtige", pyramidElderly: "👴 Ældre",
+    eraLabel: (era, role) => `${era}: ${role}`,
+    govModalTitle: "🏛️ Styreform", govModalIntro: "Enevældige styreformer mangler legitimitet — de er effektive, men falder let, hvis befolkningen er utilfreds. Demokrati og republik er langsommere, men mere stabile. Teokrati er sin egen gren: stærkt fællesskab, langsommere videnskab.",
+    govCurrent: "· nuværende",
+    govStatLine: (r, c, a, u) => `Forskning ×${r} · Fællesskab ×${c} · Administrationseffektivitet ×${a} · Urorisiko ${u}%`,
+    govLocked: (req) => `🔒 ${req}`,
+    govReqEra: (era) => `tidsalder ≥ ${era}`,
+    govReqEdu: (v) => `uddannelsesdækning ≥ ${v}%`,
+    govReqAdmin: (v) => `administrationsdækning ≥ ${v}%`,
+    govReqCohesion: (v) => `fællesskab ≥ ${v}%`,
+    govUnlockedFromStart: "Åben fra start",
+    skillGapWarning: (era, pop, pct) => `⚠️ Kompetencemangel: ${era}tidsalderen kræver mindst ${pop} mennesker for fuld specialisering. Produktivitet nu ${pct}%.`,
+    skillGapLabel: "Kompetencemangel:",
+    reportPreview: (period) => `📜 Krønike fra ${period}`,
+    reportPreviewSub: (eventName) => `— ${eventName} · læs historien ▸`,
+    didYouKnow: "💡 Vidste du?",
+    yearByYearLabel: "År for år",
+    yearByYearNote: "★ = den begivenhed, der reelt påvirkede denne periodes beregninger",
+    showNumbers: "Vis tal ▸",
+    reportBorn: "Født", reportDied: "Døde", reportDiedChildren: "  heraf børn", reportDiedWorkers: "  arbejdsdygtige", reportDiedElderly: "  ældre",
+    reportGrownUp: "Blev voksne", reportEducated: "  heraf uddannede", reportRetired: "Gik på pension", reportLeft: "Udvandrede", reportArrived: "Ankom",
+    reportFoodProdNeed: "Mad produceret / behov", reportResearchGained: "Forskning opnået", reportPopChange: "Befolkningsændring",
+    summaryTitle: "MIT SAMFUNDS HISTORIE", summaryUnnamedCommunity: "Unavngivet samfund", summaryVillageLabel: (name) => `Landsby: ${name}`,
+    summaryLine: (year, era, pop, gov) => `År ${year} · Tidsalder: ${era} · Befolkning: ${pop} · Styreform: ${gov}`,
+    summaryTimelineHeader: "TIDSLINJE:", summaryIndexHeader: (score) => `CIVILISATIONSINDEKS: ${score}`, summaryNotesHeader: (notes) => `MINE NOTER:\n${notes}`,
+    summaryStartSkills: (list) => `Startfærdigheder: ${list}`,
+    "Väestö": "Befolkning", "Teknologia": "Teknologi", "Terveys & sivistys": "Sundhed & uddannelse", "Henki & yhteisöllisyys": "Ånd & fællesskab",
+    "Hallinto & hoiva": "Forvaltning & omsorg", "Vauraus": "Velstand", "Yhteiskuntamittarit": "Samfundsmål", "Kestävyys": "Holdbarhed",
+    workforceTitle: "Fordeling af arbejdskraft",
+    workforceRules: "Regler for fordeling",
+    workforceRulesText: "Tilføjet arbejdskraft tages altid fra den største sektor (som regel landbrug), og frigjort arbejdskraft går tilbage dertil — summen er altid 100%.",
+    personsUnit: "personer",
+    farmModeLabel: "🚜 Landbrugsretning",
+    farmModeInfoTitle: "Landbrugsretning",
+    farmModeInfoText: "Småbrug er stabilt og tilgængeligt fra start. Storbrug (fra Industriel tidsalder) øger udbyttet, men øger forurening og sårbarhed over for forstyrrelser. Økologisk landbrug (fra Moderne tidsalder) er bæredygtigt og rent, men giver mindre udbytte. Specialafgrøder (fra Industriel tidsalder) giver velstand på bekostning af fødevaresikkerhed.",
+    healthLockedEarly: "🔒 Sundhedspolitik låses op i Tidlig industriel tidsalder.",
+    healthFocusLabel: "🏥 Forebyggende ↔ Hospitalsorienteret",
+    healthFocusInfoTitle: "Forebyggende vs. hospitalsorienteret pleje",
+    healthFocusInfoText: "Forebyggende fokus (værdi nær 0%) beskytter især børn og dæmper epidemier. Hospitalsorienteret pleje (værdi nær 100%) redder bedre voksne og ældre i akutte tilfælde. Ingen af delene er entydigt bedst — valget afhænger af, hvilken aldersgruppe der har mest brug for beskyttelse lige nu.",
+    specialistLockedEarly: "🔒 Speciallæger låses op i Industriel tidsalder.",
+    specialistLabel: "🩺 Andel speciallæger",
+    specialistInfoTitle: "Andel speciallæger",
+    specialistInfoText: "En speciallæge dækker 1,4× så meget som en alment praktiserende læge — en mere krævende uddannelsesvej, men et bedre resultat i alvorlige tilfælde.",
+    researchLockedEarly: "🔒 Forskningsretning låses op i Tidlig industriel tidsalder.",
+    appliedLabel: "🔬 Grundforskning ↔ Anvendt forskning",
+    appliedInfoTitle: "Grundforskning vs. anvendt forskning",
+    appliedInfoText: "Anvendt forskning (værdi nær 100%) øger produktionseffektiviteten med det samme, men bremser ophobningen af forskningspoint med op til 40%. Grundforskning (værdi nær 0%) er langsommere at udnytte, men fører tidsalderen hurtigst fremad.",
+    eduModeLabel: "🎒 Uddannelsesretning",
+    eduModeInfoTitle: "Uddannelsesretning",
+    eduModeInfoText: "Grundskoleundervisning er stabil og tilgængelig fra start. Erhvervsuddannelse (fra Tidlig industriel tidsalder) øger produktionseffektiviteten. Videregående uddannelse (fra Industriel tidsalder) øger forskningen markant, men når færre mennesker.",
+    adminLockedEarly: "🔒 Detektiver låses op i Industriel tidsalder.",
+    detectiveLabel: "🕵️ Andel detektiver",
+    detectiveInfoTitle: "Detektiver",
+    detectiveInfoText: "Den del af administrationen, der specialiserer sig i kriminalefterforskning, sænker kriminaliteten direkte (op til −35% ved fuld andel), men trækker ressourcer fra den generelle administrationsdækning (−15% ved fuld andel).",
+    industryLockedEarly: "🔒 Industriretning låses op i Tidlig industriel tidsalder.",
+    industryLabel: "⚙️ Basisproduktion ↔ Specialiseret industri",
+    industryInfoTitle: "Basisproduktion vs. specialiseret industri",
+    industryInfoText: "Specialiseret industri (værdi nær 100%) øger effektivitet, forskning og BNP, men forurener markant mere end basisproduktion.",
+    professionsTitle: "Erhvervsfordeling",
+    outsideWorkforce: "Uden for arbejdsstyrken (børn & ældre)",
+    eraBackground: "Tidsalderens baggrund",
+    nextTurnBtn: "Ryk 5 år frem →",
+    populationChartTitle: "Befolkningsudvikling",
+    logTitle: "Krøniker",
+    yearAxisLabel: (y) => "År " + y,
+    civilizationWins: "Civilisationen blomstrer",
+    civilizationCollapsed: "Samfundet kollapsede",
+    leaderboardTitle: "🏆 Fælles resultatliste",
+    leaderboardNamePlaceholder: "Dit navn til resultatlisten",
+    saveBtn: "Gem",
+    scoreSaved: "✓ Resultat gemt!",
+    leaderboardVisibility: "Dit navn og resultat er synlige for alle, der spiller dette spil.",
+    leaderboardWin: "· sejr",
+    leaderboardEmpty: "Bliv den første på resultatlisten!",
+    peakPopLine: (peak, years) => `Befolkningstop: ${peak} · År: ${years}`,
+    restartBtn: "Vælg en ny civilisation ↺",
+    footerNote: "Modellen er en grov forenkling — men forholdstallene (bondens produktivitet, 1,8% til sundhedsvæsen, 1 lærer / 20 børn) bygger på historiske skøn.",
+    infoBtnAria: "Mere information",
+    langSwitcherAria: "Skift sprog",
+    profFarmName: "Bønder og kvægholdere", profFarmNote: (n) => `1 mætter ${n}`,
+    profHealthName: "Læger (~10%) og sygeplejersker", profHealthNote: "mål 1,8% af befolkningen",
+    profEduName: "Lærere og pædagoger", profEduNote: "1 / 20 børn",
+    profIndustryName: "Smede, bygmestre, industri", profIndustryNote: "værktøj & infrastruktur",
+    profResearchName: "Forskere og opfindere", profResearchNote: "fører tidsalderen fremad",
+    profReligionName: "Præster og åndelige ledere", profReligionNote: "fællesskab: mål 0,6% af befolkningen",
+    profArtsName: "Kunstnere, musikere, historiefortællere", profArtsNote: "moral: mål 0,5% af befolkningen",
+    profAdminName: "Embedsmænd, dommere, ordensmagt", profAdminNote: "effektivitet: mål 1,5% af befolkningen",
+    profServicesName: "Købmænd, omsorgsgivere, transportører", profServicesNote: "omsorg: mål 3% af befolkningen",
+  },
+};
+
+// ============ STORY_TEXT: vuoron kertomusgeneraattorin ja lokiviestien käännökset ============
+// nextTurn() (ja muut tilamuutosfunktiot) rakentavat pelin tarinatekstin näiden funktioiden kautta,
+// valiten kielikohtaisen taulukon pelaajan valitseman kielen (s.lang / prev.lang) mukaan.
+const STORY_TEXT = {
+  fi: {
+    openers: {
+      kato: (y0, y1) => `Vuodet ${y0}–${y1} muistetaan hallaöistä. Pellot mustuivat, ja aikuiset söivät vähemmän, jotta lapsille riittäisi.`,
+      hyvasato: (y0, y1) => `Vuodet ${y0}–${y1} olivat armollisia: aurinko ja sade vuorottelivat kuin sopimuksesta, ja aitat täyttyivät.`,
+      epidemia: (y0, y1) => `Vuosien ${y0}–${y1} aikana kylästä kylään kulki tauti, ja sen mukana pelko.`,
+      muutto: (y0, y1) => `Vuosina ${y0}–${y1} horisontista saapui vaeltajia, jotka päättivät jäädä.`,
+      rauha: (y0, y1) => `Vuodet ${y0}–${y1} kuluivat arjen merkeissä: kylvettiin, korjattiin, synnyttiin ja haudattiin.`,
+      tulipalo: (y0, y1) => `Vuosiin ${y0}–${y1} jäi arpi: yönä, jota kukaan ei unohda, varastot roihusivat.`,
+      syntyvyys: (y0, y1) => `Vuosina ${y0}–${y1} tuntui, että joka talossa itki vastasyntynyt — hyvät ajat näkyivät kehdoissa.`,
+      default: (y0, y1) => `Vuodet ${y0}–${y1}.`,
+    },
+    famine: (pct) => `Ruokaa riitti vain ${pct} %:lle väestä, ja nälkä vei heikoimmat.`,
+    goodHarvest: (farmers) => `Sato oli runsas: ${farmers} viljelijää tuotti reilusti yli tarpeen, ja ylijäämä kannettiin varastoihin.`,
+    steadyHarvest: (farmers) => `${farmers} viljelijää piti yhteisön hengissä — niukasti mutta varmasti.`,
+    demography: (births, totalDeaths, childDeaths, workerDeaths, elderDeaths) =>
+      `Kehdoissa: ${births} lasta syntyi. Haudoilla: ${totalDeaths} saatettiin viimeiselle matkalle (${childDeaths} lasta, ${workerDeaths} työikäistä, ${elderDeaths} vanhusta).`,
+    retirementPhrase: [
+      (retired) => `${retired} vanhinta siirtyi kevyempiin askareisiin ja lastenlasten hoitoon — muodollista eläkettä ei tunnettu.`,
+      (retired) => `${retired} vanhinta jäi perheen luo kevyempiin askareisiin; virallista eläkettä tuskin oli.`,
+      (retired) => `${retired} raatajaa jäi eläkkeelle uuden eläkejärjestelmän turvin.`,
+      (retired) => `${retired} työntekijää siirtyi eläkkeelle — moni jatkoi silti aktiivisena lastenhoitajana tai vapaaehtoisena.`,
+    ],
+    grownUp: (grownUp, educated, eduLow, retirementPhrase) =>
+      `${grownUp} nuorta varttui aikuisiksi ja astui työelämään — heistä ${educated} kunnollisen koulutuksen saaneina${eduLow ? ", loput opettajapulan vuoksi vaille oppia" : ""}. ${retirementPhrase}`,
+    leavers: (n) => `Kaikki eivät jääneet: ${n} vieraantunutta lähti etsimään merkitystä muualta.`,
+    migrants: (n) => `Yhteisö sai ${n} uutta jäsentä, jotka toivat mukanaan tarinoita ulkomaailmasta.`,
+    spiritHigh: "Iltaisin lauluja, pyhinä seremonioita — yhteisön henki oli vahva.",
+    spiritLow: "Temppelit seisoivat tyhjinä ja juhlapäivät unohtuivat; jokin yhteisestä tarinasta oli katkeamassa.",
+    inventionSentence: (researchGained, inventionName, inventionDesc, eraAdvanced, nextEraName) =>
+      `Tutkijat kirjasivat ${researchGained} yksikköä uutta tietoa, ja kaikkien puheenaiheena oli tuore keksintö — ${inventionName}: ${inventionDesc}${eraAdvanced ? ` Se riitti viemään yhteisön uuteen aikakauteen: ${nextEraName}!` : ""}`,
+    researchOnlySentence: (researchGained, eraAdvanced, nextEraNameLower) =>
+      `Tutkijat kirjasivat ${researchGained} yksikköä uutta tietoa${eraAdvanced ? ` — ja se riitti: ${nextEraNameLower} aikakausi koitti!` : "."}`,
+    adminDecay: "Hallinnon rapautuminen: kirjanpito pettää ja varastoista katoaa 10 %. Virkamiehiä ja tuomareita tarvittaisiin ~1,5 % väestöstä.",
+    epidemicHandled: "Epidemia torjuttiin — hoitajia oli riittävästi.",
+    epidemicBad: "Epidemia niitti satoa. Terveydenhuolto oli alimitoitettu.",
+    leaversLog: (n) => `Hajaannusta: ilman yhteisiä rituaaleja ja uskoa ${n} ihmistä vieraantui ja erkani yhteisöstä. Hengelliseen työhön tarvittaisiin ~0,6 % väestöstä.`,
+    rebellionLog: (govNameLower) => `⚔️ Kapina! Tyytymättömyys kaatoi hallinnon — ${govNameLower} väistyi ja valta palasi heimoneuvostolle.`,
+    unrestLog: "Levottomuuksia kaduilla: kansa on tyytymätön, mutta hallinto pysyy pystyssä.",
+    eraAdvanceLog: (name, desc) => `⚙️ Uusi aikakausi: ${name}! ${desc}`,
+    eraNotYetLog: (nameLower, needed) => `Tieto ${nameLower}een aikakauteen on olemassa, mutta väestöpohja (${needed}) ei vielä riitä erikoistumiseen.`,
+    inventionLog: (name, desc) => `🔧 Keksintö: ${name} — ${desc}`,
+    famineLog: (pct, deaths) => `Nälänhätä! Ruokaa riitti vain ${pct} %:lle. ${deaths} kuoli tällä jaksolla.`,
+    skillGapLog: (eraName, needed, pct) => `Osaamispula: ${eraName} aikakausi vaatisi ${needed} ihmistä. Tuottavuus vain ${pct} %.`,
+    eraAdvanceMilestone: (name, year) => `⚙️ Uusi aikakausi: ${name} (vuosi ${year}).`,
+    gameOverLose: (civName, year, pop) => `${civName} romahti vuonna ${year}. Viimeiset ${pop} eivät riitä yhteiskunnan ylläpitoon.`,
+    gameOverWin: (year, civName, pop) => `🏆 Vuonna ${year} ${civName} on moderni, vakaa ja ${pop} ihmisen vahvuinen. Voitit!`,
+    civStartLog: (civIcon, civName, trait, desc) => `${civIcon} ${civName} aloittaa: 10 000 ihmistä täydessä eristyksessä. ${trait}: ${desc}`,
+    villageFoundedMilestone: (villageLabel, civIcon, civName, skillsLabel) => `🏘️ ${villageLabel} perustettiin — ${civIcon} ${civName}${skillsLabel}`,
+    villageNamedLabel: (name) => `Kylä "${name}"`,
+    communityLabel: "Yhteisö",
+    startSkillsSuffix: (list) => `. Aloitustaidot: ${list}.`,
+    govChangeText: (icon, name) => `${icon} Hallintomuoto vaihtui: ${name}.`,
+    farmModeChangeText: (icon, name) => `${icon} Maatalouden suuntaus vaihtui: ${name}.`,
+    eduModeChangeText: (icon, name) => `${icon} Opetuksen suuntaus vaihtui: ${name}.`,
+    nationJoinLog: (icon, civName, nationName, trait) => `${icon} ${civName} jatkaa kansallisvaltiona: ${nationName}. ${trait}.`,
+    nationJoinMilestone: (icon, nationName) => `🏳️ Yhteisö muodosti kansallisvaltion: ${icon} ${nationName}.`,
+  },
+  en: {
+    openers: {
+      kato: (y0, y1) => `The years ${y0}–${y1} are remembered for frosty nights. The fields blackened, and adults ate less so the children would have enough.`,
+      hyvasato: (y0, y1) => `The years ${y0}–${y1} were kind: sun and rain alternated as if by agreement, and the granaries filled up.`,
+      epidemia: (y0, y1) => `During ${y0}–${y1}, sickness passed from village to village, and fear with it.`,
+      muutto: (y0, y1) => `In ${y0}–${y1}, wanderers arrived from over the horizon and decided to stay.`,
+      rauha: (y0, y1) => `The years ${y0}–${y1} passed in the rhythm of everyday life: sowing, mending, birth, and burial.`,
+      tulipalo: (y0, y1) => `The years ${y0}–${y1} left a scar: on a night no one forgets, the stores went up in flames.`,
+      syntyvyys: (y0, y1) => `In ${y0}–${y1} it seemed a newborn cried in every house — good times showed in the cradles.`,
+      default: (y0, y1) => `The years ${y0}–${y1}.`,
+    },
+    famine: (pct) => `Food reached only ${pct}% of the people, and hunger took the weakest.`,
+    goodHarvest: (farmers) => `The harvest was abundant: ${farmers} farmers produced well beyond need, and the surplus was carried into storage.`,
+    steadyHarvest: (farmers) => `${farmers} farmers kept the community alive — sparingly, but surely.`,
+    demography: (births, totalDeaths, childDeaths, workerDeaths, elderDeaths) =>
+      `In the cradles: ${births} children were born. To their graves: ${totalDeaths} were laid to rest (${childDeaths} children, ${workerDeaths} working-age, ${elderDeaths} elderly).`,
+    retirementPhrase: [
+      (retired) => `${retired} of the eldest moved on to lighter chores and minding grandchildren — formal retirement was unknown.`,
+      (retired) => `${retired} of the eldest stayed with family for lighter chores; there was scarcely any formal pension.`,
+      (retired) => `${retired} laborers retired under the new pension system.`,
+      (retired) => `${retired} workers retired — many still stayed active as childminders or volunteers.`,
+    ],
+    grownUp: (grownUp, educated, eduLow, retirementPhrase) =>
+      `${grownUp} young people grew into adults and entered working life — ${educated} of them with a proper education${eduLow ? ", the rest without schooling due to a shortage of teachers" : ""}. ${retirementPhrase}`,
+    leavers: (n) => `Not everyone stayed: ${n} disaffected souls left to seek meaning elsewhere.`,
+    migrants: (n) => `The community gained ${n} new members, who brought with them tales of the outside world.`,
+    spiritHigh: "Songs in the evenings, ceremonies on holy days — the community's spirit was strong.",
+    spiritLow: "The temples stood empty and the feast days were forgotten; something in the shared story was fraying.",
+    inventionSentence: (researchGained, inventionName, inventionDesc, eraAdvanced, nextEraName) =>
+      `The scholars recorded ${researchGained} units of new knowledge, and on everyone's lips was a fresh invention — ${inventionName}: ${inventionDesc}${eraAdvanced ? ` It was enough to carry the community into a new era: ${nextEraName}!` : ""}`,
+    researchOnlySentence: (researchGained, eraAdvanced, nextEraNameLower) =>
+      `The scholars recorded ${researchGained} units of new knowledge${eraAdvanced ? ` — and it was enough: the ${nextEraNameLower} era had arrived!` : "."}`,
+    adminDecay: "Administrative decay: the record-keeping breaks down and 10% of stores vanish. About 1.5% of the population would be needed as officials and judges.",
+    epidemicHandled: "The epidemic was contained — there were enough caregivers.",
+    epidemicBad: "The epidemic took a heavy toll. Healthcare was undersized.",
+    leaversLog: (n) => `Fragmentation: without shared rituals and faith, ${n} people drifted away from the community. About 0.6% of the population would be needed for spiritual work.`,
+    rebellionLog: (govNameLower) => `⚔️ Rebellion! Discontent toppled the government — ${govNameLower} gave way and power returned to the tribal council.`,
+    unrestLog: "Unrest in the streets: the people are discontent, but the government holds.",
+    eraAdvanceLog: (name, desc) => `⚙️ A new era: ${name}! ${desc}`,
+    eraNotYetLog: (nameLower, needed) => `The knowledge for the ${nameLower} era exists, but the population base (${needed}) doesn't yet suffice for specialization.`,
+    inventionLog: (name, desc) => `🔧 Invention: ${name} — ${desc}`,
+    famineLog: (pct, deaths) => `Famine! Food reached only ${pct}% of the people. ${deaths} died this period.`,
+    skillGapLog: (eraName, needed, pct) => `Skill shortage: the ${eraName} era would need ${needed} people. Productivity only ${pct}%.`,
+    eraAdvanceMilestone: (name, year) => `⚙️ New era: ${name} (year ${year}).`,
+    gameOverLose: (civName, year, pop) => `${civName} collapsed in year ${year}. The last ${pop} are not enough to sustain a society.`,
+    gameOverWin: (year, civName, pop) => `🏆 In year ${year}, ${civName} is modern, stable, and ${pop} people strong. You won!`,
+    civStartLog: (civIcon, civName, trait, desc) => `${civIcon} ${civName} begins: 10,000 people in complete isolation. ${trait}: ${desc}`,
+    villageFoundedMilestone: (villageLabel, civIcon, civName, skillsLabel) => `🏘️ ${villageLabel} was founded — ${civIcon} ${civName}${skillsLabel}`,
+    villageNamedLabel: (name) => `The village "${name}"`,
+    communityLabel: "The community",
+    startSkillsSuffix: (list) => `. Starting skills: ${list}.`,
+    govChangeText: (icon, name) => `${icon} Government changed to: ${name}.`,
+    farmModeChangeText: (icon, name) => `${icon} Agricultural focus changed to: ${name}.`,
+    eduModeChangeText: (icon, name) => `${icon} Education focus changed to: ${name}.`,
+    nationJoinLog: (icon, civName, nationName, trait) => `${icon} ${civName} continues as the nation-state: ${nationName}. ${trait}.`,
+    nationJoinMilestone: (icon, nationName) => `🏳️ The community formed the nation-state: ${icon} ${nationName}.`,
+  },
+  da: {
+    openers: {
+      kato: (y0, y1) => `Årene ${y0}–${y1} huskes for nætter med frost. Markerne sortnede, og de voksne spiste mindre, så børnene fik nok.`,
+      hyvasato: (y0, y1) => `Årene ${y0}–${y1} var nådige: sol og regn skiftedes som efter aftale, og laderne blev fyldt.`,
+      epidemia: (y0, y1) => `I løbet af ${y0}–${y1} gik sygdommen fra landsby til landsby, og frygten med den.`,
+      muutto: (y0, y1) => `I ${y0}–${y1} ankom vandrere fra horisonten, som besluttede at blive.`,
+      rauha: (y0, y1) => `Årene ${y0}–${y1} gik i hverdagens tegn: der blev sået, repareret, født og begravet.`,
+      tulipalo: (y0, y1) => `Årene ${y0}–${y1} efterlod et ar: en nat ingen glemmer, stod lagrene i flammer.`,
+      syntyvyys: (y0, y1) => `I ${y0}–${y1} føltes det, som om der græd et nyfødt barn i hvert hus — de gode tider viste sig i vuggerne.`,
+      default: (y0, y1) => `Årene ${y0}–${y1}.`,
+    },
+    famine: (pct) => `Maden rakte kun til ${pct}% af befolkningen, og sulten tog de svageste.`,
+    goodHarvest: (farmers) => `Høsten var rig: ${farmers} landmænd producerede rigeligt ud over behovet, og overskuddet blev båret i lager.`,
+    steadyHarvest: (farmers) => `${farmers} landmænd holdt samfundet i live — knapt, men sikkert.`,
+    demography: (births, totalDeaths, childDeaths, workerDeaths, elderDeaths) =>
+      `I vuggerne: ${births} børn blev født. Ved gravene: ${totalDeaths} blev ført på deres sidste rejse (${childDeaths} børn, ${workerDeaths} i den arbejdsdygtige alder, ${elderDeaths} ældre).`,
+    retirementPhrase: [
+      (retired) => `${retired} af de ældste gik over til lettere gøremål og pasning af børnebørn — formel pension var ukendt.`,
+      (retired) => `${retired} af de ældste blev hos familien til lettere gøremål; der var næppe formel pension.`,
+      (retired) => `${retired} slidere gik på pension med det nye pensionssystem.`,
+      (retired) => `${retired} arbejdere gik på pension — mange fortsatte dog aktivt som børnepassere eller frivillige.`,
+    ],
+    grownUp: (grownUp, educated, eduLow, retirementPhrase) =>
+      `${grownUp} unge voksede op og trådte ind i arbejdslivet — ${educated} af dem med en ordentlig uddannelse${eduLow ? ", resten uden undervisning på grund af lærermangel" : ""}. ${retirementPhrase}`,
+    leavers: (n) => `Ikke alle blev: ${n} fremmedgjorte drog af sted for at søge mening andetsteds.`,
+    migrants: (n) => `Samfundet fik ${n} nye medlemmer, som bragte fortællinger om verden udenfor med sig.`,
+    spiritHigh: "Sang om aftenen, ceremonier på helligdage — fællesskabets ånd var stærk.",
+    spiritLow: "Templerne stod tomme, og festdagene blev glemt; noget i den fælles fortælling var ved at gå i stykker.",
+    inventionSentence: (researchGained, inventionName, inventionDesc, eraAdvanced, nextEraName) =>
+      `Forskerne noterede ${researchGained} enheder ny viden, og på alles læber var en ny opfindelse — ${inventionName}: ${inventionDesc}${eraAdvanced ? ` Det var nok til at føre samfundet ind i en ny tidsalder: ${nextEraName}!` : ""}`,
+    researchOnlySentence: (researchGained, eraAdvanced, nextEraNameLower) =>
+      `Forskerne noterede ${researchGained} enheder ny viden${eraAdvanced ? ` — og det var nok: ${nextEraNameLower}tidsalderen var indtruffet!` : "."}`,
+    adminDecay: "Forvaltningens forfald: bogføringen svigter, og 10% af lagrene forsvinder. Der ville kræves ca. 1,5% af befolkningen som embedsmænd og dommere.",
+    epidemicHandled: "Epidemien blev afværget — der var omsorgsgivere nok.",
+    epidemicBad: "Epidemien krævede sit. Sundhedsvæsenet var underdimensioneret.",
+    leaversLog: (n) => `Splittelse: uden fælles ritualer og tro fremmedgjorde ${n} mennesker sig og forlod fællesskabet. Der ville kræves ca. 0,6% af befolkningen til åndeligt arbejde.`,
+    rebellionLog: (govNameLower) => `⚔️ Oprør! Utilfredshed væltede regeringen — ${govNameLower} veg pladsen, og magten vendte tilbage til stammerådet.`,
+    unrestLog: "Uroligheder i gaderne: folket er utilfreds, men styret holder stand.",
+    eraAdvanceLog: (name, desc) => `⚙️ En ny tidsalder: ${name}! ${desc}`,
+    eraNotYetLog: (nameLower, needed) => `Viden om ${nameLower}tidsalderen findes, men befolkningsgrundlaget (${needed}) rækker endnu ikke til specialisering.`,
+    inventionLog: (name, desc) => `🔧 Opfindelse: ${name} — ${desc}`,
+    famineLog: (pct, deaths) => `Hungersnød! Maden rakte kun til ${pct}%. ${deaths} døde i denne periode.`,
+    skillGapLog: (eraName, needed, pct) => `Kompetencemangel: ${eraName}tidsalderen ville kræve ${needed} mennesker. Produktivitet kun ${pct}%.`,
+    eraAdvanceMilestone: (name, year) => `⚙️ Ny tidsalder: ${name} (år ${year}).`,
+    gameOverLose: (civName, year, pop) => `${civName} kollapsede i år ${year}. De sidste ${pop} er ikke nok til at opretholde et samfund.`,
+    gameOverWin: (year, civName, pop) => `🏆 I år ${year} er ${civName} moderne, stabil og ${pop} mennesker stærk. I vandt!`,
+    civStartLog: (civIcon, civName, trait, desc) => `${civIcon} ${civName} begynder: 10.000 mennesker i fuldstændig isolation. ${trait}: ${desc}`,
+    villageFoundedMilestone: (villageLabel, civIcon, civName, skillsLabel) => `🏘️ ${villageLabel} blev grundlagt — ${civIcon} ${civName}${skillsLabel}`,
+    villageNamedLabel: (name) => `Landsbyen "${name}"`,
+    communityLabel: "Samfundet",
+    startSkillsSuffix: (list) => `. Startfærdigheder: ${list}.`,
+    govChangeText: (icon, name) => `${icon} Styreform skiftet til: ${name}.`,
+    farmModeChangeText: (icon, name) => `${icon} Landbrugsretning skiftet til: ${name}.`,
+    eduModeChangeText: (icon, name) => `${icon} Uddannelsesretning skiftet til: ${name}.`,
+    nationJoinLog: (icon, civName, nationName, trait) => `${icon} ${civName} fortsætter som nationalstaten: ${nationName}. ${trait}.`,
+    nationJoinMilestone: (icon, nationName) => `🏳️ Samfundet dannede nationalstaten: ${icon} ${nationName}.`,
+  },
+};
+
+
+const makeStart = (civ, villageName, startSkills, lang = "fi") => {
+  const ST = STORY_TEXT[lang] || STORY_TEXT.fi;
+  const civName = civ ? T(lang, "civs", civ.key, "name", civ.name) : null;
+  const civTrait = civ ? T(lang, "civs", civ.key, "trait", civ.trait) : null;
+  const civDesc = civ ? T(lang, "civs", civ.key, "desc", civ.desc) : null;
+  const skillNames = (startSkills || []).map((k) => T(lang, "skills", k, "name", startingSkillByKey(k)?.name));
+  const villageLabel = villageName ? ST.villageNamedLabel(villageName) : ST.communityLabel;
+  return {
+    civ,
+    lang,
+    villageName: villageName || "",
+    startSkills: startSkills || [],
+    year: 0,
+    children: 2200, workers: 6300, elderly: 1500,
+    foodStore: Math.round(5000 * combinedMods(civ, null, startSkills).store),
+    era: 0, research: 0,
+    alloc: { farm: 72, health: 3, edu: 3, industry: 8, research: 2, religion: 2, arts: 1, admin: 4, services: 5 },
+    gov: "heimo",
+    specialistShare: 0,
+    healthFocus: 50,
+    appliedShare: 0,
+    nation: null,
+    inventionIdx: 0,
+    farmMode: "pientila",
+    eduMode: "perus",
+    detectiveShare: 0,
+    industryFocus: 0,
+    log: civ ? [{ year: 0, text: ST.civStartLog(civ.icon, civName, civTrait, civDesc), tone: "info" }] : [],
+    milestones: civ ? [{ year: 0, text: ST.villageFoundedMilestone(villageLabel, civ.icon, civName, skillNames.length ? ST.startSkillsSuffix(skillNames.join(lang === "fi" ? " ja " : " & ")) : ".") }] : [],
+    history: [{ year: 0, pop: 10000 }],
+    stableTurns: 0,
+    gameOver: null,
+    lastEvent: null,
+    report: null,
+  };
+};
 
 const fmt = (n) => Math.round(n).toLocaleString("fi-FI");
 
@@ -385,8 +1362,14 @@ function Yhteiskunta() {
   };
   function startGame() {
     if (!pendingCiv || chosenSkills.length !== 2) return;
-    setS(makeStart(pendingCiv, villageNameInput.trim(), chosenSkills));
+    setS(makeStart(pendingCiv, villageNameInput.trim(), chosenSkills, s.lang));
   }
+  function changeLang(code) {
+    setS((p) => ({ ...p, lang: code }));
+  }
+  const lang = s.lang || "fi";
+  const t = (key) => U(lang, key);
+  const tc = (table, key, field, fb) => T(lang, table, key, field, fb);
   const pop = s.children + s.workers + s.elderly;
   const era = ERAS[s.era];
   const nextEra = ERAS[s.era + 1];
@@ -520,11 +1503,17 @@ function Yhteiskunta() {
   }
 
   function becomeNation(nation) {
-    setS((p) => ({
-      ...p, nation,
-      log: [{ year: p.year, text: `${nation.icon} ${p.civ.name} jatkaa kansallisvaltiona: ${nation.name}. ${nation.trait}.`, tone: "good" }, ...p.log].slice(0, 40),
-      milestones: [...p.milestones, { year: p.year, text: `🏳️ Yhteisö muodosti kansallisvaltion: ${nation.icon} ${nation.name}.` }],
-    }));
+    setS((p) => {
+      const ST = STORY_TEXT[p.lang] || STORY_TEXT.fi;
+      const civName = T(p.lang, "civs", p.civ.key, "name", p.civ.name);
+      const nationName = T(p.lang, "nations", nation.key, "name", nation.name);
+      const nationTrait = T(p.lang, "nations", nation.key, "trait", nation.trait);
+      return {
+        ...p, nation,
+        log: [{ year: p.year, text: ST.nationJoinLog(nation.icon, civName, nationName, nationTrait), tone: "good" }, ...p.log].slice(0, 40),
+        milestones: [...p.milestones, { year: p.year, text: ST.nationJoinMilestone(nation.icon, nationName) }],
+      };
+    });
     setNationOpen(false);
   }
 
@@ -543,7 +1532,7 @@ function Yhteiskunta() {
     if (!playerName.trim() || scoreSaved) return;
     try {
       const b = await loadBoard();
-      b.push({ name: playerName.trim().slice(0, 20), civ: s.civ.name, icon: s.civ.icon, score: score.total, year: s.year, pop: Math.round(pop), win: !!s.gameOver?.win });
+      b.push({ name: playerName.trim().slice(0, 20), civ: tc("civs", s.civ.key, "name", s.civ.name), icon: s.civ.icon, score: score.total, year: s.year, pop: Math.round(pop), win: !!s.gameOver?.win });
       b.sort((x, y) => y.score - x.score);
       await window.storage.set("yhteiskunta-leaderboard-v1", JSON.stringify(b.slice(0, 50)), true);
       setBoard(b.slice(0, 50));
@@ -555,17 +1544,17 @@ function Yhteiskunta() {
   const professions = useMemo(() => {
     const w = (k) => Math.round((s.workers * alloc[k]) / 100);
     return [
-      { name: "Viljelijät ja karjanhoitajat", n: w("farm"), note: `1 ruokkii ${Math.round(era.feeds * M.farm * derived.efficiency * derived.skillPenalty * derived.farmMode.mods.feedsMult)}` },
-      { name: "Lääkärit (~10 %) ja hoitajat", n: w("health"), note: "tavoite 1,8 % väestöstä" },
-      { name: "Opettajat ja kasvattajat", n: w("edu"), note: "1 / 20 lasta" },
-      { name: "Sepät, rakentajat, teollisuus", n: w("industry"), note: "työkalut & infra" },
-      { name: "Tutkijat ja keksijät", n: w("research"), note: "vie aikakautta eteenpäin" },
-      { name: "Papit ja hengelliset johtajat", n: w("religion"), note: "koheesio: tavoite 0,6 % väestöstä" },
-      { name: "Taiteilijat, muusikot, tarinankertojat", n: w("arts"), note: "moraali: tavoite 0,5 % väestöstä" },
-      { name: "Virkamiehet, tuomarit, järjestyksenvalvojat", n: w("admin"), note: "tehokkuus: tavoite 1,5 % väestöstä" },
-      { name: "Kauppiaat, hoivaajat, kuljettajat", n: w("services"), note: "hoiva: tavoite 3 % väestöstä" },
+      { name: t("profFarmName"), n: w("farm"), note: t("profFarmNote")(fmt(Math.round(era.feeds * M.farm * derived.efficiency * derived.skillPenalty * derived.farmMode.mods.feedsMult))) },
+      { name: t("profHealthName"), n: w("health"), note: t("profHealthNote") },
+      { name: t("profEduName"), n: w("edu"), note: t("profEduNote") },
+      { name: t("profIndustryName"), n: w("industry"), note: t("profIndustryNote") },
+      { name: t("profResearchName"), n: w("research"), note: t("profResearchNote") },
+      { name: t("profReligionName"), n: w("religion"), note: t("profReligionNote") },
+      { name: t("profArtsName"), n: w("arts"), note: t("profArtsNote") },
+      { name: t("profAdminName"), n: w("admin"), note: t("profAdminNote") },
+      { name: t("profServicesName"), n: w("services"), note: t("profServicesNote") },
     ];
-  }, [s, alloc, era, M, derived]);
+  }, [s, alloc, era, M, derived, lang]);
 
   // ---- Allokaation säätö: lisäys otetaan suurimmasta sektorista, vähennys palautuu suurimpaan ----
   function setAlloc(key, val) {
@@ -597,10 +1586,12 @@ function Yhteiskunta() {
     setS((p) => {
       if (p.gov === key) return p;
       const g = govByKey(key);
+      const ST = STORY_TEXT[p.lang] || STORY_TEXT.fi;
+      const gName = T(p.lang, "governments", g.key, "name", g.name);
       return {
         ...p, gov: key,
-        log: [{ year: p.year, text: `${g.icon} Hallintomuoto vaihtui: ${g.name}.`, tone: "info" }, ...p.log].slice(0, 40),
-        milestones: [...p.milestones, { year: p.year, text: `${g.icon} Hallintomuoto vaihtui: ${g.name}.` }],
+        log: [{ year: p.year, text: ST.govChangeText(g.icon, gName), tone: "info" }, ...p.log].slice(0, 40),
+        milestones: [...p.milestones, { year: p.year, text: ST.govChangeText(g.icon, gName) }],
       };
     });
   }
@@ -622,7 +1613,9 @@ function Yhteiskunta() {
     setS((p) => {
       if (p.farmMode === key) return p;
       const m = farmModeByKey(key);
-      return { ...p, farmMode: key, milestones: [...p.milestones, { year: p.year, text: `${m.icon} Maatalouden suuntaus vaihtui: ${m.name}.` }] };
+      const ST = STORY_TEXT[p.lang] || STORY_TEXT.fi;
+      const mName = T(p.lang, "farmModes", m.key, "name", m.name);
+      return { ...p, farmMode: key, milestones: [...p.milestones, { year: p.year, text: ST.farmModeChangeText(m.icon, mName) }] };
     });
   }
   // ---- Opetuksen suuntaus (valinta, ei liukuva osuus) ----
@@ -630,7 +1623,9 @@ function Yhteiskunta() {
     setS((p) => {
       if (p.eduMode === key) return p;
       const m = eduModeByKey(key);
-      return { ...p, eduMode: key, milestones: [...p.milestones, { year: p.year, text: `${m.icon} Opetuksen suuntaus vaihtui: ${m.name}.` }] };
+      const ST = STORY_TEXT[p.lang] || STORY_TEXT.fi;
+      const mName = T(p.lang, "eduModes", m.key, "name", m.name);
+      return { ...p, eduMode: key, milestones: [...p.milestones, { year: p.year, text: ST.eduModeChangeText(m.icon, mName) }] };
     });
   }
   // ---- Rikostutkijoiden osuus hallinnosta (avautuu Teollisesta) ----
@@ -646,6 +1641,8 @@ function Yhteiskunta() {
   function nextTurn() {
     setS((prev) => {
       if (prev.gameOver || !prev.civ) return prev;
+      const lang = prev.lang || "fi";
+      const ST = STORY_TEXT[lang] || STORY_TEXT.fi;
       const C = combinedMods(prev.civ, prev.nation, prev.startSkills);
       const a = prev.alloc;
       const total = Object.values(a).reduce((x, y) => x + y, 0);
@@ -687,7 +1684,7 @@ function Yhteiskunta() {
       const preventiveFrac = eraIdx >= 1 ? 1 - healthFocus / 100 : 0.5;
       if (adminCov < 0.6) {
         foodStore *= 0.9;
-        log.push({ text: "Hallinnon rapautuminen: kirjanpito pettää ja varastoista katoaa 10 %. Virkamiehiä ja tuomareita tarvittaisiin ~1,5 % väestöstä.", tone: "bad" });
+        log.push({ text: ST.adminDecay, tone: "bad" });
       }
 
       // Ruoka (resilience lieventää katovuoden osumaa, tehokkuus kertautuu tuotantoon)
@@ -718,7 +1715,7 @@ function Yhteiskunta() {
       if (ev.epidemic) {
         const hit = 0.12 * (1.4 - healthCov) * C.resilience * (1 - 0.2 * preventiveFrac);
         childMort += hit; workerMort += hit * 0.6; elderMort += hit * 1.5;
-        log.push({ text: healthCov > 0.9 ? "Epidemia torjuttiin — hoitajia oli riittävästi." : "Epidemia niitti satoa. Terveydenhuolto oli alimitoitettu.", tone: healthCov > 0.9 ? "good" : "bad" });
+        log.push({ text: healthCov > 0.9 ? ST.epidemicHandled : ST.epidemicBad, tone: healthCov > 0.9 ? "good" : "bad" });
       }
       childMort = Math.min(0.9, childMort); workerMort = Math.min(0.9, workerMort); elderMort = Math.min(0.95, elderMort);
 
@@ -739,7 +1736,7 @@ function Yhteiskunta() {
         const leavers = 0.02 * (1 - cohesion);
         leaverCount = popNow * leavers;
         children *= 1 - leavers; workers *= 1 - leavers; elderly *= 1 - leavers;
-        log.push({ text: `Hajaannusta: ilman yhteisiä rituaaleja ja uskoa ${fmt(leaverCount)} ihmistä vieraantui ja erkani yhteisöstä. Hengelliseen työhön tarvittaisiin ~0,6 % väestöstä.`, tone: "bad" });
+        log.push({ text: ST.leaversLog(fmt(leaverCount)), tone: "bad" });
       }
 
       // Levottomuudet: tyytymättömyys (matala yhteisöllisyys/moraali) yhdistettynä hallintomuodon
@@ -753,9 +1750,9 @@ function Yhteiskunta() {
           children *= 1 - hit; workers *= 1 - hit; elderly *= 1 - hit;
           if (G.axis === "Itsevaltainen" || G.axis === "Uskonnollinen") {
             govKey = "heimo";
-            log.push({ text: `⚔️ Kapina! Tyytymättömyys kaatoi hallinnon — ${G.name.toLowerCase()} väistyi ja valta palasi heimoneuvostolle.`, tone: "bad" });
+            log.push({ text: ST.rebellionLog(T(lang, "governments", G.key, "name", G.name).toLowerCase()), tone: "bad" });
           } else {
-            log.push({ text: "Levottomuuksia kaduilla: kansa on tyytymätön, mutta hallinto pysyy pystyssä.", tone: "bad" });
+            log.push({ text: ST.unrestLog, tone: "bad" });
           }
         }
       }
@@ -785,27 +1782,32 @@ function Yhteiskunta() {
       const N = ERAS[eraIdx + 1];
       const nMinPop = N ? Math.round(N.minPop * C.minPop) : 0;
       let eraAdvanced = false;
+      const nEraIdxForT = eraBeforeAdvance + 1;
       if (N && research >= N.research && children + workers + elderly >= nMinPop * 0.6) {
         eraIdx++; eraAdvanced = true;
-        log.push({ text: `⚙️ Uusi aikakausi: ${N.name}! ${N.desc}`, tone: "good" });
+        log.push({ text: ST.eraAdvanceLog(TE(lang, nEraIdxForT, "name", N.name), TE(lang, nEraIdxForT, "desc", N.desc)), tone: "good" });
       } else if (N && research >= N.research) {
-        log.push({ text: `Tieto ${N.name.toLowerCase()}een aikakauteen on olemassa, mutta väestöpohja (${fmt(nMinPop * 0.6)}) ei vielä riitä erikoistumiseen.`, tone: "info" });
+        log.push({ text: ST.eraNotYetLog(TE(lang, nEraIdxForT, "name", N.name).toLowerCase(), fmt(nMinPop * 0.6)), tone: "info" });
       }
 
       // ===== KEKSINNÖT: tutkimuksen edistyessä paljastuu aikakaudelle ominaisia keksintöjä =====
       const invList = INVENTIONS_BY_ERA[eraBeforeAdvance] || [];
       let newInventionIdx = inventionIdx;
       let inventionReveal = null;
+      let inventionRevealIdx = -1;
       if (invList.length) {
         if (N) {
           const milestone = Math.min(invList.length - 1, Math.floor((Math.max(0, research) / N.research) * invList.length));
-          if (milestone > inventionIdx) { inventionReveal = invList[milestone]; newInventionIdx = milestone; }
+          if (milestone > inventionIdx) { inventionReveal = invList[milestone]; inventionRevealIdx = milestone; newInventionIdx = milestone; }
         } else if (Math.random() < 0.35) {
           const idx = Math.floor(Math.random() * invList.length);
           inventionReveal = invList[idx];
+          inventionRevealIdx = idx;
         }
       }
       if (eraAdvanced) newInventionIdx = 0;
+      const inventionRevealName = inventionReveal ? TInv(lang, eraBeforeAdvance, inventionRevealIdx, "name", inventionReveal.name) : null;
+      const inventionRevealDesc = inventionReveal ? TInv(lang, eraBeforeAdvance, inventionRevealIdx, "desc", inventionReveal.desc) : null;
 
       const newPop = children + workers + elderly;
       const year = prev.year + 5;
@@ -814,41 +1816,28 @@ function Yhteiskunta() {
 
       // ===== VIISIVUOTISKERTOMUS: tarina siitä, mitä tapahtui =====
       const p = [];
+      const advancedEraName = TE(lang, eraIdx, "name", ERAS[eraIdx].name);
       // Avaus tapahtuman mukaan
-      const openers = {
-        kato: `Vuodet ${prev.year}–${year} muistetaan hallaöistä. Pellot mustuivat, ja aikuiset söivät vähemmän, jotta lapsille riittäisi.`,
-        hyvasato: `Vuodet ${prev.year}–${year} olivat armollisia: aurinko ja sade vuorottelivat kuin sopimuksesta, ja aitat täyttyivät.`,
-        epidemia: `Vuosien ${prev.year}–${year} aikana kylästä kylään kulki tauti, ja sen mukana pelko.`,
-        muutto: `Vuosina ${prev.year}–${year} horisontista saapui vaeltajia, jotka päättivät jäädä.`,
-        rauha: `Vuodet ${prev.year}–${year} kuluivat arjen merkeissä: kylvettiin, korjattiin, synnyttiin ja haudattiin.`,
-        tulipalo: `Vuosiin ${prev.year}–${year} jäi arpi: yönä, jota kukaan ei unohda, varastot roihusivat.`,
-        syntyvyys: `Vuosina ${prev.year}–${year} tuntui, että joka talossa itki vastasyntynyt — hyvät ajat näkyivät kehdoissa.`,
-      };
-      p.push(openers[ev.id] ?? `Vuodet ${prev.year}–${year}.`);
+      p.push((ST.openers[ev.id] ?? ST.openers.default)(prev.year, year));
       // Ruoka
-      if (famine > 0.02) p.push(`Ruokaa riitti vain ${Math.round(foodRatio * 100)} %:lle väestä, ja nälkä vei heikoimmat.`);
-      else if (foodProd > foodNeed * 1.3) p.push(`Sato oli runsas: ${fmt(farmers)} viljelijää tuotti reilusti yli tarpeen, ja ylijäämä kannettiin varastoihin.`);
-      else p.push(`${fmt(farmers)} viljelijää piti yhteisön hengissä — niukasti mutta varmasti.`);
+      if (famine > 0.02) p.push(ST.famine(Math.round(foodRatio * 100)));
+      else if (foodProd > foodNeed * 1.3) p.push(ST.goodHarvest(fmt(farmers)));
+      else p.push(ST.steadyHarvest(fmt(farmers)));
       // Väestö
-      p.push(`Kehdoissa: ${fmt(births)} lasta syntyi. Haudoilla: ${fmt(totalDeaths)} saatettiin viimeiselle matkalle (${fmt(childDeaths)} lasta, ${fmt(workerDeaths)} työikäistä, ${fmt(elderDeaths)} vanhusta).`);
-      const retirementPhrase = [
-        `${fmt(retired)} vanhinta siirtyi kevyempiin askareisiin ja lastenlasten hoitoon — muodollista eläkettä ei tunnettu.`,
-        `${fmt(retired)} vanhinta jäi perheen luo kevyempiin askareisiin; virallista eläkettä tuskin oli.`,
-        `${fmt(retired)} raatajaa jäi eläkkeelle uuden eläkejärjestelmän turvin.`,
-        `${fmt(retired)} työntekijää siirtyi eläkkeelle — moni jatkoi silti aktiivisena lastenhoitajana tai vapaaehtoisena.`,
-      ][eraBeforeAdvance];
-      p.push(`${fmt(grownUp)} nuorta varttui aikuisiksi ja astui työelämään — heistä ${fmt(educated)} kunnollisen koulutuksen saaneina${eduCov < 0.6 ? ", loput opettajapulan vuoksi vaille oppia" : ""}. ${retirementPhrase}`);
-      if (leaverCount > 0) p.push(`Kaikki eivät jääneet: ${fmt(leaverCount)} vieraantunutta lähti etsimään merkitystä muualta.`);
-      if (migrantCount > 0) p.push(`Yhteisö sai ${fmt(migrantCount)} uutta jäsentä, jotka toivat mukanaan tarinoita ulkomaailmasta.`);
+      p.push(ST.demography(fmt(births), fmt(totalDeaths), fmt(childDeaths), fmt(workerDeaths), fmt(elderDeaths)));
+      const retirementPhrase = ST.retirementPhrase[eraBeforeAdvance](fmt(retired));
+      p.push(ST.grownUp(fmt(grownUp), fmt(educated), eduCov < 0.6, retirementPhrase));
+      if (leaverCount > 0) p.push(ST.leavers(fmt(leaverCount)));
+      if (migrantCount > 0) p.push(ST.migrants(fmt(migrantCount)));
       // Henki & tiede
-      if (morale > 1 && cohesion > 1) p.push(`Iltaisin lauluja, pyhinä seremonioita — yhteisön henki oli vahva.`);
-      else if (cohesion < 0.5) p.push(`Temppelit seisoivat tyhjinä ja juhlapäivät unohtuivat; jokin yhteisestä tarinasta oli katkeamassa.`);
+      if (morale > 1 && cohesion > 1) p.push(ST.spiritHigh);
+      else if (cohesion < 0.5) p.push(ST.spiritLow);
       if (inventionReveal) {
         // Keksintö kudotaan osaksi samaa virkettä kuin tutkimustulos, ei erillisenä lisättynä huomiona.
-        p.push(`Tutkijat kirjasivat ${fmt(researchGained)} yksikköä uutta tietoa, ja kaikkien puheenaiheena oli tuore keksintö — ${inventionReveal.name}: ${inventionReveal.desc}${eraAdvanced ? ` Se riitti viemään yhteisön uuteen aikakauteen: ${ERAS[eraIdx].name}!` : ""}`);
-        log.push({ text: `🔧 Keksintö: ${inventionReveal.name} — ${inventionReveal.desc}`, tone: "good" });
+        p.push(ST.inventionSentence(fmt(researchGained), inventionRevealName, inventionRevealDesc, eraAdvanced, advancedEraName));
+        log.push({ text: ST.inventionLog(inventionRevealName, inventionRevealDesc), tone: "good" });
       } else if (researchGained > 0) {
-        p.push(`Tutkijat kirjasivat ${fmt(researchGained)} yksikköä uutta tietoa${eraAdvanced ? ` — ja se riitti: ${ERAS[eraIdx].name.toLowerCase()} aikakausi koitti!` : "."}`);
+        p.push(ST.researchOnlySentence(fmt(researchGained), eraAdvanced, advancedEraName.toLowerCase()));
       }
       const story = p.join(" ");
 
@@ -859,50 +1848,54 @@ function Yhteiskunta() {
       const years = [];
       for (let yo = 1; yo <= 5; yo++) {
         const ye = yo === primaryOffset ? ev : pickEvent(nationEvents);
-        years.push({ year: prev.year + yo, name: ye.name, desc: ye.desc, primary: yo === primaryOffset });
+        years.push({ year: prev.year + yo, name: T(lang, "events", ye.id, "name", ye.name), desc: T(lang, "events", ye.id, "desc", ye.desc), primary: yo === primaryOffset });
       }
 
+      const factIdx = prev.history.length % FACTS.length;
+      const evName = T(lang, "events", ev.id, "name", ev.name);
+      const evDesc = T(lang, "events", ev.id, "desc", ev.desc);
       const report = {
         period: `${prev.year}–${year}`,
         story,
         years,
         eraIdx: eraBeforeAdvance,
         invention: inventionReveal,
-        fact: FACTS[prev.history.length % FACTS.length],
-        eventName: ev.name,
+        fact: TFact(lang, factIdx, FACTS[factIdx]),
+        eventName: evName,
         rows: [
-          ["Syntyneet", "+" + fmt(births)],
-          ["Kuolleet", "−" + fmt(totalDeaths)],
-          ["  joista lapsia", fmt(childDeaths)],
-          ["  työikäisiä", fmt(workerDeaths)],
-          ["  vanhuksia", fmt(elderDeaths)],
-          ["Aikuistuneet", fmt(grownUp)],
-          ["  joista koulutettuja", fmt(educated)],
-          ["Eläköityneet", fmt(retired)],
-          ...(leaverCount > 0 ? [["Poismuuttaneet", "−" + fmt(leaverCount)]] : []),
-          ...(migrantCount > 0 ? [["Saapuneet", "+" + fmt(migrantCount)]] : []),
-          ["Ruokaa tuotettu / tarve", `${fmt(foodProd)} / ${fmt(foodNeed)}`],
-          ["Tutkimusta kertyi", "+" + fmt(researchGained)],
-          ["Väestömuutos", (newPop >= popNow ? "+" : "") + fmt(newPop - popNow)],
+          [U(lang, "reportBorn"), "+" + fmt(births)],
+          [U(lang, "reportDied"), "−" + fmt(totalDeaths)],
+          [U(lang, "reportDiedChildren"), fmt(childDeaths)],
+          [U(lang, "reportDiedWorkers"), fmt(workerDeaths)],
+          [U(lang, "reportDiedElderly"), fmt(elderDeaths)],
+          [U(lang, "reportGrownUp"), fmt(grownUp)],
+          [U(lang, "reportEducated"), fmt(educated)],
+          [U(lang, "reportRetired"), fmt(retired)],
+          ...(leaverCount > 0 ? [[U(lang, "reportLeft"), "−" + fmt(leaverCount)]] : []),
+          ...(migrantCount > 0 ? [[U(lang, "reportArrived"), "+" + fmt(migrantCount)]] : []),
+          [U(lang, "reportFoodProdNeed"), `${fmt(foodProd)} / ${fmt(foodNeed)}`],
+          [U(lang, "reportResearchGained"), "+" + fmt(researchGained)],
+          [U(lang, "reportPopChange"), (newPop >= popNow ? "+" : "") + fmt(newPop - popNow)],
         ],
       };
 
-      log.unshift({ text: `${ev.name}: ${ev.desc}`, tone: ev.foodMod < 1 || ev.epidemic || ev.storeMod ? "bad" : ev.id === "rauha" ? "info" : "good" });
-      if (famine > 0.02) log.push({ text: `Nälänhätä! Ruokaa riitti vain ${Math.round(foodRatio * 100)} %:lle. ${fmt(childDeaths + workerDeaths + elderDeaths)} kuoli tällä jaksolla.`, tone: "bad" });
-      if (skillPenalty < 1) log.push({ text: `Osaamispula: ${E.name} aikakausi vaatisi ${fmt(eMinPop)} ihmistä. Tuottavuus vain ${Math.round(skillPenalty * 100)} %.`, tone: "bad" });
+      log.unshift({ text: `${evName}: ${evDesc}`, tone: ev.foodMod < 1 || ev.epidemic || ev.storeMod ? "bad" : ev.id === "rauha" ? "info" : "good" });
+      if (famine > 0.02) log.push({ text: ST.famineLog(Math.round(foodRatio * 100), fmt(childDeaths + workerDeaths + elderDeaths)), tone: "bad" });
+      if (skillPenalty < 1) log.push({ text: ST.skillGapLog(TE(lang, prev.era, "name", E.name), fmt(eMinPop), Math.round(skillPenalty * 100)), tone: "bad" });
 
+      const civNameForEnd = T(lang, "civs", prev.civ.key, "name", prev.civ.name);
       let gameOver = null;
       if (newPop < 150) {
-        gameOver = { win: false, text: `${prev.civ.name} romahti vuonna ${year}. Viimeiset ${fmt(newPop)} eivät riitä yhteiskunnan ylläpitoon.` };
+        gameOver = { win: false, text: ST.gameOverLose(civNameForEnd, year, fmt(newPop)) };
       } else {
         if (eraIdx === 3 && newPop > prev.history[prev.history.length - 1].pop * 0.98) stableTurns++;
         else stableTurns = 0;
-        if (stableTurns >= 3) gameOver = { win: true, text: `🏆 Vuonna ${year} ${prev.civ.name} on moderni, vakaa ja ${fmt(newPop)} ihmisen vahvuinen. Voitit!` };
+        if (stableTurns >= 3) gameOver = { win: true, text: ST.gameOverWin(year, civNameForEnd, fmt(newPop)) };
       }
 
       const newMilestones = [];
-      if (eraAdvanced) newMilestones.push({ year, text: `⚙️ Uusi aikakausi: ${N.name} (vuosi ${year}).` });
-      if (inventionReveal) newMilestones.push({ year, text: `🔧 Keksintö: ${inventionReveal.name} — ${inventionReveal.desc}` });
+      if (eraAdvanced) newMilestones.push({ year, text: ST.eraAdvanceMilestone(advancedEraName, year) });
+      if (inventionReveal) newMilestones.push({ year, text: ST.inventionLog(inventionRevealName, inventionRevealDesc) });
 
       return {
         ...prev,
@@ -928,7 +1921,7 @@ function Yhteiskunta() {
 
   // Pieni "ℹ️" -painike joka avaa selittävän tekstin omaan modaliin, jotta pääruutu pysyy siistinä
   const InfoButton = ({ title, text }) => (
-    <button className="info-btn" onClick={() => setInfoModal({ title, text })} aria-label="Lisätietoa">ℹ️</button>
+    <button className="info-btn" onClick={() => setInfoModal({ title, text })} aria-label={t("infoBtnAria")}>ℹ️</button>
   );
 
   const Section = ({ title, open, onToggle, children, right }) => (
@@ -945,7 +1938,7 @@ function Yhteiskunta() {
   );
 
   // Pieni valintarivi laadullisille suuntauksille (maatalous, opetus) — ei liukuva osuus vaan valinta yhdestä vaihtoehdosta
-  const ModeSelector = ({ modes, current, onSelect, eraIdx, disabled }) => (
+  const ModeSelector = ({ modes, current, onSelect, eraIdx, disabled, table }) => (
     <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
       {modes.map((m) => {
         const unlocked = eraIdx >= m.minEra;
@@ -955,7 +1948,7 @@ function Yhteiskunta() {
             key={m.key}
             disabled={!unlocked || disabled}
             onClick={() => onSelect(m.key)}
-            title={m.desc}
+            title={tc(table, m.key, "desc", m.desc)}
             style={{
               font: "inherit", cursor: unlocked ? "pointer" : "not-allowed", fontSize: 11.5, padding: "5px 8px", borderRadius: 6,
               border: active ? "1.5px solid #c9a227" : "1px solid #2a3d57",
@@ -964,7 +1957,7 @@ function Yhteiskunta() {
               opacity: unlocked ? 1 : 0.45,
             }}
           >
-            {m.icon} {m.name}{!unlocked && " 🔒"}
+            {m.icon} {tc(table, m.key, "name", m.name)}{!unlocked && " 🔒"}
           </button>
         );
       })}
@@ -994,6 +1987,8 @@ function Yhteiskunta() {
         .grid2{display:grid;grid-template-columns:1.2fr 1fr;gap:20px;align-items:start}
         .grid-graphlog{display:grid;grid-template-columns:minmax(220px,1fr) 2fr;gap:14px;margin-top:10px}
         .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:1px;background:#263a54;border:1px solid #263a54;border-radius:8px;overflow:hidden;margin-bottom:16px}
+        .lang-switch button{font:inherit;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.5px;padding:3px 7px;border-radius:4px;cursor:pointer;background:none;border:1px solid #2a3d57;color:#93a3ba}
+        .lang-switch button.active{border-color:#c9a227;color:#c9a227}
         @media (max-width:680px){
           .grid2{grid-template-columns:1fr}
           .grid-graphlog{grid-template-columns:1fr}
@@ -1005,29 +2000,34 @@ function Yhteiskunta() {
       `}</style>
 
       <div style={{ maxWidth: 980, margin: "0 auto" }}>
+        <div className="lang-switch" style={{ display: "flex", justifyContent: "flex-end", gap: 4, marginBottom: 8 }} role="group" aria-label={t("langSwitcherAria")}>
+          {LOCALES.map((code) => (
+            <button key={code} className={lang === code ? "active" : ""} onClick={() => changeLang(code)}>{code.toUpperCase()}</button>
+          ))}
+        </div>
         {s.civ ? (
           <header style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 8, marginBottom: 16, paddingBottom: 14, borderBottom: "1px solid #263a54" }}>
             <div>
               <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(20px,3.2vw,30px)", fontWeight: 700, letterSpacing: 0.5, color: "#f0e8d2" }}>
                 {s.villageName && <>{s.villageName} <span style={{ color: "#c9a227" }}>·</span> </>}
-                {s.nation ? `${s.nation.icon} ${s.nation.name}` : `${s.civ.icon} ${s.civ.name}`}
+                {s.nation ? `${s.nation.icon} ${tc("nations", s.nation.key, "name", s.nation.name)}` : `${s.civ.icon} ${tc("civs", s.civ.key, "name", s.civ.name)}`}
               </div>
               <div style={{ fontSize: 13, color: "#93a3ba", letterSpacing: 2, textTransform: "uppercase", marginTop: 2 }}>
-                {era.name} aikakausi · Vuosi {s.year}
+                {t("eraYearLabel")(TE(lang, s.era, "name", era.name), s.year)}
               </div>
             </div>
             <div style={{ textAlign: "right" }}>
-              <div style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "#93a3ba" }}>Sivilisaatioindeksi</div>
+              <div style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "#93a3ba" }}>{t("civIndexLabel")}</div>
               <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 30, fontWeight: 700, color: "#c9a227", lineHeight: 1 }}>{fmt(score.total)}</div>
             </div>
           </header>
         ) : (
           <header style={{ textAlign: "center", marginBottom: 16, borderBottom: "1px solid #263a54", paddingBottom: 14 }}>
             <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(22px,4vw,34px)", fontWeight: 700, margin: 0, letterSpacing: 0.5, color: "#f0e8d2" }}>
-              YHTEISKUNTA
+              {t("appTitle")}
             </h1>
             <div style={{ color: "#93a3ba", marginTop: 4, fontSize: 14 }}>
-              Society · 10 000 ihmistä. Ei tuontia. Ei vientiä. Kuinka pitkälle pääsette?
+              {t("appTagline")}
             </div>
           </header>
         )}
@@ -1036,19 +2036,19 @@ function Yhteiskunta() {
         {!s.civ && !pendingCiv && (
           <div>
             <p style={{ textAlign: "center", fontSize: 16, color: "#93a3ba", maxWidth: 640, margin: "0 auto 16px" }}>
-              Valitse sivilisaatiosi. Kullakin on historiaan perustuvat vahvuudet — ja heikkoudet.
+              {t("chooseCivIntro")}
             </p>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(215px,1fr))", gap: 10 }}>
               {CIVS.map((c) => {
                 const mods = Object.entries(c.mods);
                 return (
                   <button key={c.key} className="civcard" onClick={() => setPendingCiv(c)}>
-                    <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 17, fontWeight: 700, color: "#f0e8d2" }}>{c.icon} {c.name}</div>
-                    <div style={{ fontSize: 12, color: "#c9a227", fontWeight: 600, margin: "2px 0 4px" }}>{c.trait}</div>
-                    <div style={{ fontSize: 12, color: "#cfd6de", marginBottom: 6 }}>{c.desc}</div>
+                    <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 17, fontWeight: 700, color: "#f0e8d2" }}>{c.icon} {tc("civs", c.key, "name", c.name)}</div>
+                    <div style={{ fontSize: 12, color: "#c9a227", fontWeight: 600, margin: "2px 0 4px" }}>{tc("civs", c.key, "trait", c.trait)}</div>
+                    <div style={{ fontSize: 12, color: "#cfd6de", marginBottom: 6 }}>{tc("civs", c.key, "desc", c.desc)}</div>
                     {mods.map(([k, v]) => (
                       <div key={k} style={{ fontSize: 11, fontFamily: "'IBM Plex Mono',monospace", color: (k === "resilience" || k === "minPop" ? v < 1 : k === "health" ? v > 0 : v > 1) ? "#7fbf8f" : "#c96a5a" }}>
-                        {(k === "resilience" || k === "minPop" ? v < 1 : k === "health" ? v > 0 : v > 1) ? "▲" : "▼"} {MOD_LABELS[k](v)}
+                        {(k === "resilience" || k === "minPop" ? v < 1 : k === "health" ? v > 0 : v > 1) ? "▲" : "▼"} {modLabel(lang, k, v)}
                       </div>
                     ))}
                   </button>
@@ -1056,7 +2056,7 @@ function Yhteiskunta() {
               })}
             </div>
             <p style={{ textAlign: "center", fontSize: 12, color: "#93a3ba", marginTop: 14 }}>
-              20 sivilisaatiota Arnold Toynbeen klassisen luokittelun hengessä. Historioitsijat eivät ole yksimielisiä sivilisaatioiden määrästä: Spengler laski 8, Toynbee 21–28, Quigley 24.
+              {t("civFootnote")}
             </p>
           </div>
         )}
@@ -1064,21 +2064,21 @@ function Yhteiskunta() {
         {/* ===== KYLÄN NIMEÄMINEN JA ALOITUSTAIDOT ===== */}
         {!s.civ && pendingCiv && (
           <div style={{ maxWidth: 640, margin: "0 auto" }}>
-            <button onClick={() => { setPendingCiv(null); setChosenSkills([]); }} style={{ background: "none", border: "none", color: "#c9a227", fontSize: 13, cursor: "pointer", padding: 0, marginBottom: 12 }}>◂ Vaihda sivilisaatio</button>
+            <button onClick={() => { setPendingCiv(null); setChosenSkills([]); }} style={{ background: "none", border: "none", color: "#c9a227", fontSize: 13, cursor: "pointer", padding: 0, marginBottom: 12 }}>{t("changeCiv")}</button>
             <div className="paper" style={{ marginBottom: 14 }}>
-              <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 18, fontWeight: 700, marginBottom: 10, color: "#f0e8d2" }}>{pendingCiv.icon} {pendingCiv.name} — nimeä kylläsi</div>
+              <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 18, fontWeight: 700, marginBottom: 10, color: "#f0e8d2" }}>{pendingCiv.icon} {t("nameYourVillage")(tc("civs", pendingCiv.key, "name", pendingCiv.name))}</div>
               <input
                 value={villageNameInput}
                 onChange={(e) => setVillageNameInput(e.target.value.slice(0, 30))}
-                placeholder="Kylän nimi (valinnainen)"
+                placeholder={t("villageNamePlaceholder")}
                 style={{ width: "100%", padding: "10px 12px", fontSize: 15, fontFamily: "'Source Sans 3',sans-serif", color: "#e9e2cf", border: "1.5px solid #c9a22766", borderRadius: 8, background: "#0d1c30", boxSizing: "border-box" }}
               />
-              <p style={{ fontSize: 12, color: "#93a3ba", margin: "6px 0 0" }}>Nimi näkyy tarinassa ja historianäkymässä — hyvä nimi tekee myöhemmästä esittelystä muille hauskemman.</p>
+              <p style={{ fontSize: 12, color: "#93a3ba", margin: "6px 0 0" }}>{t("villageNameHint")}</p>
             </div>
 
             <div className="paper">
-              <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 18, fontWeight: 700, marginBottom: 4, color: "#f0e8d2" }}>Valitse kaksi aloitustaitoa</div>
-              <p style={{ fontSize: 12.5, color: "#93a3ba", margin: "0 0 10px" }}>Nämä ovat pieniä pysyviä bonuksia koko peliajaksi — valitse ne, jotka sopivat suunnittelemaasi strategiaan. ({chosenSkills.length}/2 valittu)</p>
+              <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 18, fontWeight: 700, marginBottom: 4, color: "#f0e8d2" }}>{t("chooseTwoSkills")}</div>
+              <p style={{ fontSize: 12.5, color: "#93a3ba", margin: "0 0 10px" }}>{t("chosenSkillsHint")(chosenSkills.length)}</p>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(230px,1fr))", gap: 8 }}>
                 {STARTING_SKILLS.map((sk) => {
                   const active = chosenSkills.includes(sk.key);
@@ -1091,8 +2091,8 @@ function Yhteiskunta() {
                       className="civcard"
                       style={{ borderColor: active ? "#c9a227" : "#263a54", background: active ? "rgba(201,162,39,0.14)" : "#12233a", opacity: disabled ? 0.45 : 1, cursor: disabled ? "not-allowed" : "pointer" }}
                     >
-                      <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 15, fontWeight: 700, color: "#f0e8d2" }}>{sk.icon} {sk.name}{active && " ✓"}</div>
-                      <div style={{ fontSize: 11.5, color: "#cfd6de", marginTop: 2 }}>{sk.desc}</div>
+                      <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 15, fontWeight: 700, color: "#f0e8d2" }}>{sk.icon} {tc("skills", sk.key, "name", sk.name)}{active && " ✓"}</div>
+                      <div style={{ fontSize: 11.5, color: "#cfd6de", marginTop: 2 }}>{tc("skills", sk.key, "desc", sk.desc)}</div>
                     </button>
                   );
                 })}
@@ -1100,7 +2100,7 @@ function Yhteiskunta() {
             </div>
 
             <div style={{ textAlign: "center", marginTop: 16 }}>
-              <button className="btn" onClick={startGame} disabled={chosenSkills.length !== 2}>Perusta kylä ja aloita ▸</button>
+              <button className="btn" onClick={startGame} disabled={chosenSkills.length !== 2}>{t("startBtn")}</button>
             </div>
           </div>
         )}
@@ -1109,35 +2109,35 @@ function Yhteiskunta() {
         {s.civ && (
           <>
             <div className="stat-grid">
-              <Stat label="Väkiluku" value={fmt(pop)} sub={`👶${fmt(s.children)} 💪${fmt(s.workers)} 👴${fmt(s.elderly)}`} warn={pop < 2000} />
-              <Stat label="Ruokavarasto" value={fmt(s.foodStore)} sub={`Tase ${foodBalance >= 0 ? "+" : ""}${fmt(foodBalance)}`} warn={foodBalance < 0 && s.foodStore < pop * 0.5} />
-              <Stat label="Tutkimus" value={nextEra ? `${fmt(s.research)}/${fmt(nextEra.research)}` : fmt(s.research)} sub={nextEra ? `→ ${nextEra.name}` : "Huippu saavutettu"} />
-              <Stat label="Elinajanodote" value={Math.round(derived.lifeExpectancy) + " v"} />
-              <Stat label="Terveys" value={Math.round(derived.healthCov * 100) + " %"} sub={`Koul. ${Math.round(derived.eduCov * 100)} % · Hoiva ${Math.round(derived.careCov * 100)} %`} warn={derived.healthCov < 0.7} />
-              <Stat label="Yhteisö" value={Math.round(derived.cohesion * 100) + " %"} sub={`Moraali ${Math.round(derived.morale * 100)} %`} warn={derived.cohesion < 0.5 || derived.adminCov < 0.6} />
+              <Stat label={t("statPop")} value={fmt(pop)} sub={`👶${fmt(s.children)} 💪${fmt(s.workers)} 👴${fmt(s.elderly)}`} warn={pop < 2000} />
+              <Stat label={t("statFood")} value={fmt(s.foodStore)} sub={`${t("statBalance")} ${foodBalance >= 0 ? "+" : ""}${fmt(foodBalance)}`} warn={foodBalance < 0 && s.foodStore < pop * 0.5} />
+              <Stat label={t("statResearch")} value={nextEra ? `${fmt(s.research)}/${fmt(nextEra.research)}` : fmt(s.research)} sub={nextEra ? `→ ${TE(lang, s.era + 1, "name", nextEra.name)}` : t("statTopEra")} />
+              <Stat label={t("statLife")} value={Math.round(derived.lifeExpectancy) + T(lang, "metrics", "lifeExpectancy", "unit", " v")} />
+              <Stat label={t("statHealth")} value={Math.round(derived.healthCov * 100) + " %"} sub={t("statHealthSub")(Math.round(derived.eduCov * 100), Math.round(derived.careCov * 100))} warn={derived.healthCov < 0.7} />
+              <Stat label={t("statCommunity")} value={Math.round(derived.cohesion * 100) + " %"} sub={t("statCommunitySub")(Math.round(derived.morale * 100))} warn={derived.cohesion < 0.5 || derived.adminCov < 0.6} />
             </div>
 
             <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
               <button onClick={() => setPyramidOpen(true)} className="paper" style={{ cursor: "pointer", font: "inherit", padding: "6px 12px", fontSize: 13, color: "#cfd6de" }}>
-                👪 Keski-ikä {Math.round(derived.avgAge)} v · Väestön jakauma ▸
+                {t("pyramidBtn")(Math.round(derived.avgAge))}
               </button>
               <button onClick={() => setGovOpen(true)} className="paper" style={{ cursor: "pointer", font: "inherit", padding: "6px 12px", fontSize: 13, color: "#cfd6de" }}>
-                {govByKey(s.gov).icon} {govByKey(s.gov).name} · Hallintomuoto ▸
+                {govByKey(s.gov).icon} {t("govBtn")(tc("governments", govByKey(s.gov).key, "name", govByKey(s.gov).name))}
               </button>
               <button onClick={() => setMetricsOpen(true)} className="paper" style={{ cursor: "pointer", font: "inherit", padding: "6px 12px", fontSize: 13, color: "#cfd6de" }}>
-                📈 Yhteiskuntamittarit ▸
+                {t("metricsBtn")}
               </button>
               <button onClick={() => setHistoryOpen(true)} className="paper" style={{ cursor: "pointer", font: "inherit", padding: "6px 12px", fontSize: 13, border: "1px solid #c9a227", background: "rgba(201,162,39,0.1)", fontWeight: 600, color: "#f0e8d2" }}>
-                📖 Historia ja esittely ▸
+                {t("historyBtn")}
               </button>
               {s.nation ? (
                 <div className="paper" style={{ padding: "6px 12px", fontSize: 13, background: "rgba(201,162,39,0.1)", color: "#cfd6de" }}>
-                  {s.nation.icon} {s.nation.name} <span style={{ color: "#93a3ba" }}>· kansallisvaltio</span>
+                  {s.nation.icon} {tc("nations", s.nation.key, "name", s.nation.name)} <span style={{ color: "#93a3ba" }}>{t("nationTag")}</span>
                 </div>
               ) : (
                 s.era >= 2 && NATION_BRANCHES[s.civ.key] && (
                   <button onClick={() => setNationOpen(true)} className="paper" style={{ cursor: "pointer", font: "inherit", padding: "6px 12px", fontSize: 13, border: "1px solid #c9a22766", background: "rgba(201,162,39,0.06)", color: "#cfd6de" }}>
-                    🏳️ Muodosta kansallisvaltio ▸
+                    {t("formNationBtn")}
                   </button>
                 )
               )}
@@ -1147,28 +2147,29 @@ function Yhteiskunta() {
               <div style={{ position: "fixed", inset: 0, background: "rgba(6,12,22,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 20, padding: 12 }} onClick={() => setNationOpen(false)}>
                 <div className="modal-panel" style={{ maxWidth: 620, width: "100%", maxHeight: "88vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                    <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, margin: "0 0 6px", color: "#f0e8d2" }}>🏳️ Muodosta kansallisvaltio</h2>
+                    <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, margin: "0 0 6px", color: "#f0e8d2" }}>{t("nationModalTitle")}</h2>
                     <button onClick={() => setNationOpen(false)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#93a3ba", lineHeight: 1 }}>✕</button>
                   </div>
-                  <p style={{ fontSize: 13, color: "#93a3ba", margin: "0 0 12px" }}>{s.civ.icon} {s.civ.name} voi jatkaa yhtenä historiallisista kansallisvaltioistaan. Kukin tuo oman tapahtumakirjonsa perussimulaation päälle. Peruspeli pysyy täysin pelattavana ilman näitä — tämä on valinnainen syvennys.</p>
+                  <p style={{ fontSize: 13, color: "#93a3ba", margin: "0 0 12px" }}>{t("nationModalIntro")(`${s.civ.icon} ${tc("civs", s.civ.key, "name", s.civ.name)}`)}</p>
                   {NATION_BRANCHES[s.civ.key].map((n) => {
                     const owned = ownedNations.includes(n.key);
+                    const nName = tc("nations", n.key, "name", n.name);
                     return (
                       <div key={n.key} className="civcard" style={{ width: "100%", marginBottom: 8, display: "block" }}>
-                        <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 16, fontWeight: 700, color: "#f0e8d2" }}>{n.icon} {n.name}</div>
-                        <div style={{ fontSize: 11.5, color: "#c9a227", fontWeight: 600, margin: "2px 0 4px" }}>{n.trait}</div>
-                        <div style={{ fontSize: 11.5, color: "#cfd6de", marginBottom: 6 }}>{n.events.length} omaa historiallista tapahtumaa: {n.events.map((e) => e.name).join(" · ")}</div>
+                        <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 16, fontWeight: 700, color: "#f0e8d2" }}>{n.icon} {nName}</div>
+                        <div style={{ fontSize: 11.5, color: "#c9a227", fontWeight: 600, margin: "2px 0 4px" }}>{tc("nations", n.key, "trait", n.trait)}</div>
+                        <div style={{ fontSize: 11.5, color: "#cfd6de", marginBottom: 6 }}>{t("nationEventsLabel")(n.events.length, n.events.map((e) => T(lang, "events", e.id, "name", e.name)).join(" · "))}</div>
                         {owned ? (
-                          <button className="btn" style={{ padding: "8px 16px", fontSize: 13 }} onClick={() => becomeNation(n)}>Jatka {n.name}na ▸</button>
+                          <button className="btn" style={{ padding: "8px 16px", fontSize: 13 }} onClick={() => becomeNation(n)}>{t("continueAsNation")(nName)}</button>
                         ) : (
                           <button className="btn" style={{ padding: "8px 16px", fontSize: 13 }} disabled={buyingNation === n.key} onClick={() => buyNation(n)}>
-                            {buyingNation === n.key ? "Käsitellään…" : `Osta ${n.price} (demo) 🔓`}
+                            {buyingNation === n.key ? t("buyingNation") : t("buyNation")(n.price)}
                           </button>
                         )}
                       </div>
                     );
                   })}
-                  <div style={{ fontSize: 10.5, color: "#93a3ba", marginTop: 6 }}>Demo-osto: tallentuu vain tähän selaimeen, ei oikeaa veloitusta. Oikeassa julkaisussa tämä kytkettäisiin sovelluskaupan maksuun.</div>
+                  <div style={{ fontSize: 10.5, color: "#93a3ba", marginTop: 6 }}>{t("nationDemoNote")}</div>
                 </div>
               </div>
             )}
@@ -1177,23 +2178,24 @@ function Yhteiskunta() {
               <div style={{ position: "fixed", inset: 0, background: "rgba(6,12,22,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 20, padding: 12 }} onClick={() => setMetricsOpen(false)}>
                 <div className="modal-panel" style={{ maxWidth: 560, width: "100%", maxHeight: "88vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                    <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, margin: "0 0 6px", color: "#f0e8d2" }}>📈 Yhteiskuntamittarit</h2>
+                    <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, margin: "0 0 6px", color: "#f0e8d2" }}>{t("metricsModalTitle")}</h2>
                     <button onClick={() => setMetricsOpen(false)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#93a3ba", lineHeight: 1 }}>✕</button>
                   </div>
-                  <p style={{ fontSize: 13, color: "#93a3ba", margin: "0 0 12px" }}>Mittarit mukailevat oikeita yhteiskuntatieteen tunnuslukuja ja avautuvat sitä mukaa kun vastaava mittausmenetelmä syntyi historiassa. Kunkin ℹ️ kertoo, miten oikea mittari lasketaan.</p>
+                  <p style={{ fontSize: 13, color: "#93a3ba", margin: "0 0 12px" }}>{t("metricsModalIntro")}</p>
                   {METRICS.map((m) => {
                     const unlocked = s.era >= m.unlockEra;
                     const val = unlocked ? derived[m.key] : null;
+                    const mUnit = tc("metrics", m.key, "unit", m.unit);
                     return (
                       <div key={m.key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 4px", borderBottom: "1px dotted #263a54" }}>
                         <div>
-                          <span style={{ fontSize: 14, color: "#cfd6de" }}>{m.icon} {m.name}</span>
-                          {unlocked && <InfoButton title={m.infoTitle} text={m.infoText} />}
-                          {!unlocked && <div style={{ fontSize: 10.5, color: "#93a3ba" }}>🔒 Avautuu aikakaudella: {ERAS[m.unlockEra].name}</div>}
+                          <span style={{ fontSize: 14, color: "#cfd6de" }}>{m.icon} {tc("metrics", m.key, "name", m.name)}</span>
+                          {unlocked && <InfoButton title={tc("metrics", m.key, "infoTitle", m.infoTitle)} text={tc("metrics", m.key, "infoText", m.infoText)} />}
+                          {!unlocked && <div style={{ fontSize: 10.5, color: "#93a3ba" }}>{t("metricLocked")(TE(lang, m.unlockEra, "name", ERAS[m.unlockEra].name))}</div>}
                         </div>
                         {unlocked && (
                           <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontWeight: 600, fontSize: 15, color: "#e9e2cf" }}>
-                            {m.decimals ? val.toFixed(m.decimals) : Math.round(val)}{m.unit}
+                            {m.decimals ? val.toFixed(m.decimals) : Math.round(val)}{mUnit}
                           </span>
                         )}
                       </div>
@@ -1204,19 +2206,23 @@ function Yhteiskunta() {
             )}
 
             {historyOpen && (() => {
+              const govName = tc("governments", govByKey(s.gov).key, "name", govByKey(s.gov).name);
+              const eraName = TE(lang, s.era, "name", era.name);
+              const civName = tc("civs", s.civ.key, "name", s.civ.name);
+              const nationName = s.nation ? tc("nations", s.nation.key, "name", s.nation.name) : null;
               const summaryText = [
-                `YHTEISKUNTANI HISTORIA`,
-                `${s.villageName ? `Kylä: ${s.villageName}` : "Nimeämätön yhteisö"} — ${s.civ.icon} ${s.civ.name}${s.nation ? ` → ${s.nation.icon} ${s.nation.name}` : ""}`,
-                s.startSkills.length ? `Aloitustaidot: ${s.startSkills.map((k) => startingSkillByKey(k)?.name).join(", ")}` : "",
-                `Vuosi ${s.year} · Aikakausi: ${era.name} · Väestö: ${fmt(pop)} · Hallintomuoto: ${govByKey(s.gov).name}`,
+                t("summaryTitle"),
+                `${s.villageName ? t("summaryVillageLabel")(s.villageName) : t("summaryUnnamedCommunity")} — ${s.civ.icon} ${civName}${s.nation ? ` → ${s.nation.icon} ${nationName}` : ""}`,
+                s.startSkills.length ? t("summaryStartSkills")(s.startSkills.map((k) => tc("skills", k, "name", startingSkillByKey(k)?.name)).join(", ")) : "",
+                t("summaryLine")(s.year, eraName, fmt(pop), govName),
                 ``,
-                `AIKAJANA:`,
+                t("summaryTimelineHeader"),
                 ...s.milestones.map((m) => `v.${m.year} — ${m.text}`),
                 ``,
-                `SIVILISAATIOINDEKSI: ${fmt(score.total)}`,
-                ...Object.entries(score.parts).map(([k, v]) => `  ${k}: ${fmt(v)}`),
+                t("summaryIndexHeader")(fmt(score.total)),
+                ...Object.entries(score.parts).map(([k, v]) => `  ${t(k)}: ${fmt(v)}`),
                 ``,
-                studentNotes ? `OMAT HUOMIONI:\n${studentNotes}` : "",
+                studentNotes ? t("summaryNotesHeader")(studentNotes) : "",
               ].filter(Boolean).join("\n");
 
               const showCopied = () => {
@@ -1249,22 +2255,22 @@ function Yhteiskunta() {
               <div style={{ position: "fixed", inset: 0, background: "rgba(6,12,22,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 20, padding: 12 }} onClick={() => setHistoryOpen(false)}>
                 <div className="modal-panel" style={{ maxWidth: 640, width: "100%", maxHeight: "90vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                    <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, margin: "0 0 6px", color: "#f0e8d2" }}>📖 {s.villageName ? `${s.villageName}n historia` : "Yhteisöni historia"}</h2>
+                    <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, margin: "0 0 6px", color: "#f0e8d2" }}>{t("historyModalTitle")(s.villageName)}</h2>
                     <button onClick={() => setHistoryOpen(false)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#93a3ba", lineHeight: 1 }}>✕</button>
                   </div>
-                  <p style={{ fontSize: 12.5, color: "#93a3ba", margin: "0 0 12px" }}>Tämä näkymä kokoaa yhteisösi koko tarinan — hyvä pohja esitellä muille, mitä valintoja teit ja miksi.</p>
+                  <p style={{ fontSize: 12.5, color: "#93a3ba", margin: "0 0 12px" }}>{t("historyModalIntro")}</p>
 
                   <div style={{ background: "#12233a", border: "1px solid #2a3d57", borderRadius: 8, padding: "10px 12px", marginBottom: 12 }}>
-                    <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 16, fontWeight: 700, color: "#f0e8d2" }}>{s.civ.icon} {s.civ.name}{s.nation && <> → {s.nation.icon} {s.nation.name}</>}</div>
+                    <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 16, fontWeight: 700, color: "#f0e8d2" }}>{s.civ.icon} {civName}{s.nation && <> → {s.nation.icon} {nationName}</>}</div>
                     {s.startSkills.length > 0 && (
                       <div style={{ fontSize: 12.5, color: "#cfd6de", marginTop: 4 }}>
-                        Aloitustaidot: {s.startSkills.map((k) => `${startingSkillByKey(k)?.icon} ${startingSkillByKey(k)?.name}`).join(" · ")}
+                        {t("startSkillsLabel")(s.startSkills.map((k) => `${startingSkillByKey(k)?.icon} ${tc("skills", k, "name", startingSkillByKey(k)?.name)}`).join(" · "))}
                       </div>
                     )}
-                    <div style={{ fontSize: 12.5, color: "#cfd6de", marginTop: 4 }}>Nyt: vuosi {s.year} · {era.name} · {fmt(pop)} asukasta · {govByKey(s.gov).icon} {govByKey(s.gov).name}</div>
+                    <div style={{ fontSize: 12.5, color: "#cfd6de", marginTop: 4 }}>{t("nowSummary")(s.year, eraName, fmt(pop), `${govByKey(s.gov).icon} ${govName}`)}</div>
                   </div>
 
-                  <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 1.2, color: "#93a3ba", marginBottom: 6 }}>Aikajana — keskeiset käännekohdat</div>
+                  <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 1.2, color: "#93a3ba", marginBottom: 6 }}>{t("timelineLabel")}</div>
                   <div style={{ maxHeight: 200, overflowY: "auto", marginBottom: 14 }}>
                     {s.milestones.map((m, i) => (
                       <div key={i} style={{ padding: "5px 8px", fontSize: 13, borderLeft: "3px solid #c9a227", marginBottom: 3, background: "rgba(255,255,255,0.03)", color: "#cfd6de" }}>
@@ -1273,12 +2279,12 @@ function Yhteiskunta() {
                     ))}
                   </div>
 
-                  <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 1.2, color: "#93a3ba", marginBottom: 6 }}>Sivilisaatioindeksi nyt: {fmt(score.total)}</div>
+                  <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 1.2, color: "#93a3ba", marginBottom: 6 }}>{t("indexNowLabel")(fmt(score.total))}</div>
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, marginBottom: 14 }}>
                     <tbody>
                       {Object.entries(score.parts).map(([k, v]) => (
                         <tr key={k} style={{ borderBottom: "1px dotted #263a54" }}>
-                          <td style={{ padding: "3px 4px", color: "#cfd6de" }}>{k}</td>
+                          <td style={{ padding: "3px 4px", color: "#cfd6de" }}>{t(k)}</td>
                           <td style={{ textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", fontWeight: 600, color: "#e9e2cf" }}>{fmt(v)}</td>
                         </tr>
                       ))}
@@ -1286,27 +2292,27 @@ function Yhteiskunta() {
                   </table>
 
                   <div style={{ background: "rgba(201,162,39,0.08)", border: "1px dashed #c9a22766", borderRadius: 6, padding: "10px 12px", marginBottom: 14, fontSize: 13, color: "#cfd6de" }}>
-                    <b style={{ color: "#f0e8d2" }}>💡 Pohdittavaksi esittelyä varten:</b>
+                    <b style={{ color: "#f0e8d2" }}>{t("reflectionTitle")}</b>
                     <ul style={{ margin: "6px 0 0", paddingLeft: 18 }}>
-                      <li>Mikä valinta (hallintomuoto, erikoistuminen, tuotantosuunta) vaikutti eniten yhteiskuntasi kehitykseen?</li>
-                      <li>Mikä historiallinen tapahtuma yllätti sinut eniten? Miten reagoit siihen?</li>
-                      <li>Jos aloittaisit uudelleen, minkä valinnan tekisit toisin — ja miksi?</li>
-                      <li>Mitä yhtäläisyyksiä näet oman yhteiskuntasi ja oikean historian välillä?</li>
+                      <li>{t("reflectionQ1")}</li>
+                      <li>{t("reflectionQ2")}</li>
+                      <li>{t("reflectionQ3")}</li>
+                      <li>{t("reflectionQ4")}</li>
                     </ul>
                   </div>
 
-                  <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 1.2, color: "#93a3ba", marginBottom: 6 }}>Omat huomiosi (näkyy vain sinulle, tällä laitteella)</div>
+                  <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 1.2, color: "#93a3ba", marginBottom: 6 }}>{t("notesLabel")}</div>
                   <textarea
                     value={studentNotes}
                     onChange={(e) => setStudentNotes(e.target.value.slice(0, 2000))}
-                    placeholder="Kirjoita tähän ajatuksiasi esittelyä varten..."
+                    placeholder={t("notesPlaceholder")}
                     rows={4}
                     style={{ width: "100%", padding: "8px 10px", fontSize: 13.5, fontFamily: "'Source Sans 3',sans-serif", color: "#e9e2cf", border: "1.5px solid #263a54", borderRadius: 8, background: "#0d1c30", boxSizing: "border-box", marginBottom: 12 }}
                   />
 
                   <div style={{ textAlign: "center", display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
-                    <button className="btn" style={{ padding: "10px 18px", fontSize: 14 }} onClick={copySummary}>{copyDone ? "✓ Kopioitu!" : "📋 Kopioi teksti esitystä varten"}</button>
-                    <button className="btn" style={{ padding: "10px 18px", fontSize: 14 }} onClick={() => setHistoryOpen(false)}>Sulje ✕</button>
+                    <button className="btn" style={{ padding: "10px 18px", fontSize: 14 }} onClick={copySummary}>{copyDone ? t("copiedBtn") : t("copyBtn")}</button>
+                    <button className="btn" style={{ padding: "10px 18px", fontSize: 14 }} onClick={() => setHistoryOpen(false)}>{t("closeBtn")}</button>
                   </div>
                 </div>
               </div>
@@ -1316,17 +2322,17 @@ function Yhteiskunta() {
               <div style={{ position: "fixed", inset: 0, background: "rgba(6,12,22,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 20, padding: 12 }} onClick={() => setPyramidOpen(false)}>
                 <div className="modal-panel" style={{ maxWidth: 560, width: "100%", maxHeight: "88vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                    <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, margin: "0 0 10px", color: "#f0e8d2" }}>👪 Väestön jakauma</h2>
+                    <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, margin: "0 0 10px", color: "#f0e8d2" }}>{t("pyramidModalTitle")}</h2>
                     <button onClick={() => setPyramidOpen(false)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#93a3ba", lineHeight: 1 }}>✕</button>
                   </div>
                   <div style={{ display: "flex", gap: 16, marginBottom: 14, flexWrap: "wrap" }}>
-                    <div><div style={{ fontSize: 11, color: "#93a3ba", textTransform: "uppercase" }}>Keski-ikä</div><div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 22, fontWeight: 700, color: "#e9e2cf" }}>{Math.round(derived.avgAge)} v</div></div>
-                    <div><div style={{ fontSize: 11, color: "#93a3ba", textTransform: "uppercase" }}>Huoltosuhde</div><div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 22, fontWeight: 700, color: "#e9e2cf" }}>{Math.round(derived.depRatio)}</div><div style={{ fontSize: 10.5, color: "#93a3ba" }}>lasta+vanhusta / 100 työikäistä</div></div>
+                    <div><div style={{ fontSize: 11, color: "#93a3ba", textTransform: "uppercase" }}>{t("avgAgeLabel")}</div><div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 22, fontWeight: 700, color: "#e9e2cf" }}>{Math.round(derived.avgAge)}{T(lang, "metrics", "lifeExpectancy", "unit", " v")}</div></div>
+                    <div><div style={{ fontSize: 11, color: "#93a3ba", textTransform: "uppercase" }}>{t("depRatioLabel")}</div><div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 22, fontWeight: 700, color: "#e9e2cf" }}>{Math.round(derived.depRatio)}</div><div style={{ fontSize: 10.5, color: "#93a3ba" }}>{t("depRatioNote")}</div></div>
                   </div>
                   {[
-                    { label: "👶 Lapset", n: s.children, color: "#c9a227", role: era.roles.children },
-                    { label: "💪 Työikäiset", n: s.workers, color: "#7fbf8f", role: era.roles.youth },
-                    { label: "👴 Vanhukset", n: s.elderly, color: "#93a3ba", role: era.roles.elderly },
+                    { label: t("pyramidChildren"), n: s.children, color: "#c9a227", role: TRole(lang, s.era, "children", era.roles.children) },
+                    { label: t("pyramidWorkers"), n: s.workers, color: "#7fbf8f", role: TRole(lang, s.era, "youth", era.roles.youth) },
+                    { label: t("pyramidElderly"), n: s.elderly, color: "#93a3ba", role: TRole(lang, s.era, "elderly", era.roles.elderly) },
                   ].map((g) => (
                     <div key={g.label} style={{ marginBottom: 12 }}>
                       <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, marginBottom: 4, color: "#cfd6de" }}>
@@ -1336,11 +2342,11 @@ function Yhteiskunta() {
                       <div style={{ height: 8, background: "#1c3049", borderRadius: 4, overflow: "hidden", marginBottom: 5 }}>
                         <div style={{ width: `${(g.n / pop) * 100}%`, height: "100%", background: g.color }} />
                       </div>
-                      <div style={{ fontSize: 12, color: "#93a3ba" }}>{era.name}: {g.role}</div>
+                      <div style={{ fontSize: 12, color: "#93a3ba" }}>{t("eraLabel")(TE(lang, s.era, "name", era.name), g.role)}</div>
                     </div>
                   ))}
                   <div style={{ textAlign: "center", marginTop: 6 }}>
-                    <button className="btn" style={{ padding: "10px 20px", fontSize: 15 }} onClick={() => setPyramidOpen(false)}>Sulje ✕</button>
+                    <button className="btn" style={{ padding: "10px 20px", fontSize: 15 }} onClick={() => setPyramidOpen(false)}>{t("closeBtn")}</button>
                   </div>
                 </div>
               </div>
@@ -1350,13 +2356,19 @@ function Yhteiskunta() {
               <div style={{ position: "fixed", inset: 0, background: "rgba(6,12,22,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 20, padding: 12 }} onClick={() => setGovOpen(false)}>
                 <div className="modal-panel" style={{ maxWidth: 620, width: "100%", maxHeight: "88vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                    <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, margin: "0 0 10px", color: "#f0e8d2" }}>🏛️ Hallintomuoto</h2>
+                    <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, margin: "0 0 10px", color: "#f0e8d2" }}>{t("govModalTitle")}</h2>
                     <button onClick={() => setGovOpen(false)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#93a3ba", lineHeight: 1 }}>✕</button>
                   </div>
-                  <p style={{ fontSize: 13, color: "#93a3ba", margin: "0 0 12px" }}>Itsevaltaisilta hallinnoilta puuttuu legitimiteetti — ne tuottavat tehokkaasti mutta kaatuvat herkästi, jos kansa on tyytymätön. Demokratia ja tasavalta ovat hitaampia mutta vakaampia. Teokratia on oma haaransa: vahva yhteisöllisyys, hitaampi tiede.</p>
+                  <p style={{ fontSize: 13, color: "#93a3ba", margin: "0 0 12px" }}>{t("govModalIntro")}</p>
                   {GOVERNMENTS.map((g) => {
                     const unlocked = govUnlocked(g, s.era, derived);
                     const active = s.gov === g.key;
+                    const reqText = g.minEra === 0 && !g.reqEdu && !g.reqAdmin && !g.reqCohesion ? t("govUnlockedFromStart") : [
+                      g.minEra > 0 ? t("govReqEra")(TE(lang, g.minEra, "name", ERAS[g.minEra].name)) : null,
+                      g.reqEdu ? t("govReqEdu")(Math.round(g.reqEdu * 100)) : null,
+                      g.reqAdmin ? t("govReqAdmin")(Math.round(g.reqAdmin * 100)) : null,
+                      g.reqCohesion ? t("govReqCohesion")(Math.round(g.reqCohesion * 100)) : null,
+                    ].filter(Boolean).join(" · ");
                     return (
                       <button
                         key={g.key}
@@ -1365,13 +2377,13 @@ function Yhteiskunta() {
                         className="civcard"
                         style={{ width: "100%", marginBottom: 8, opacity: unlocked ? 1 : 0.45, cursor: unlocked ? "pointer" : "not-allowed", borderColor: active ? "#c9a227" : "#263a54", background: active ? "rgba(201,162,39,0.1)" : "#12233a" }}
                       >
-                        <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 16, fontWeight: 700, color: "#f0e8d2" }}>{g.icon} {g.name} {active && "· nykyinen"}</div>
-                        <div style={{ fontSize: 11.5, color: "#c9a227", fontWeight: 600, margin: "2px 0 4px" }}>{g.axis}</div>
-                        <div style={{ fontSize: 12, color: "#cfd6de", marginBottom: 4 }}>{g.desc}</div>
+                        <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 16, fontWeight: 700, color: "#f0e8d2" }}>{g.icon} {tc("governments", g.key, "name", g.name)} {active && t("govCurrent")}</div>
+                        <div style={{ fontSize: 11.5, color: "#c9a227", fontWeight: 600, margin: "2px 0 4px" }}>{tc("governments", g.key, "axis", g.axis)}</div>
+                        <div style={{ fontSize: 12, color: "#cfd6de", marginBottom: 4 }}>{tc("governments", g.key, "desc", g.desc)}</div>
                         <div style={{ fontSize: 11, fontFamily: "'IBM Plex Mono',monospace", color: "#93a3ba" }}>
-                          Tutkimus ×{g.researchMod} · Yhteisöllisyys ×{g.cohesionMod} · Hallintoteho ×{g.adminEff} · Levottomuusriski {Math.round(g.unrest * 100)} %
+                          {t("govStatLine")(g.researchMod, g.cohesionMod, g.adminEff, Math.round(g.unrest * 100))}
                         </div>
-                        {!unlocked && <div style={{ fontSize: 11, color: "#c96a5a", marginTop: 4 }}>🔒 {govRequirementText(g)}</div>}
+                        {!unlocked && <div style={{ fontSize: 11, color: "#c96a5a", marginTop: 4 }}>{t("govLocked")(reqText)}</div>}
                       </button>
                     );
                   })}
@@ -1381,7 +2393,7 @@ function Yhteiskunta() {
 
             {derived.skillPenalty < 1 && (
               <div style={{ background: "rgba(201,162,39,0.1)", border: "1px solid #c9a22766", borderRadius: 6, padding: "8px 14px", marginBottom: 12, fontSize: 14, color: "#cfd6de" }}>
-                ⚠️ <b style={{ color: "#f0e8d2" }}>Osaamispula:</b> {era.name} aikakausi vaatisi vähintään {fmt(eraMinPop)} ihmistä täyteen erikoistumiseen. Tuottavuus nyt {Math.round(derived.skillPenalty * 100)} %.
+                {t("skillGapWarning")(TE(lang, s.era, "name", era.name), fmt(eraMinPop), Math.round(derived.skillPenalty * 100))}
               </div>
             )}
 
@@ -1391,8 +2403,8 @@ function Yhteiskunta() {
                 className="paper"
                 style={{ display: "block", width: "100%", textAlign: "left", cursor: "pointer", marginBottom: 10, borderLeft: "3px solid #c9a227", padding: "8px 12px", font: "inherit" }}
               >
-                <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 14, fontWeight: 700, color: "#f0e8d2" }}>📜 Kertomus vuosilta {s.report.period}</span>
-                <span style={{ fontSize: 12, color: "#93a3ba", marginLeft: 8 }}>— {s.report.eventName} · lue tarina ▸</span>
+                <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 14, fontWeight: 700, color: "#f0e8d2" }}>{t("reportPreview")(s.report.period)}</span>
+                <span style={{ fontSize: 12, color: "#93a3ba", marginLeft: 8 }}>{t("reportPreviewSub")(s.report.eventName)}</span>
               </button>
             )}
 
@@ -1400,21 +2412,21 @@ function Yhteiskunta() {
               <div style={{ position: "fixed", inset: 0, background: "rgba(6,12,22,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 20, padding: 12 }} onClick={() => setReportOpen(false)}>
                 <div className="modal-panel" style={{ maxWidth: 640, width: "100%", maxHeight: "88vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                    <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, margin: "0 0 10px", color: "#f0e8d2" }}>📜 Kertomus vuosilta {s.report.period}</h2>
+                    <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, margin: "0 0 10px", color: "#f0e8d2" }}>{t("reportPreview")(s.report.period)}</h2>
                     <button onClick={() => setReportOpen(false)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#93a3ba", lineHeight: 1 }}>✕</button>
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(260px,1fr))", gap: 16, alignItems: "start" }}>
                     <div>
                       <div style={{ background: "#12233a", border: "1px solid #2a3d57", borderRadius: 8, padding: "14px 16px", marginBottom: 10 }}>
-                        <div style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "#c9a227", marginBottom: 6 }}>{STORY_LABELS[s.report.eraIdx] ?? STORY_LABELS[0]}</div>
+                        <div style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "#c9a227", marginBottom: 6 }}>{TVoice(lang, s.report.eraIdx, STORY_LABELS[s.report.eraIdx] ?? STORY_LABELS[0])}</div>
                         <p style={{ fontSize: 14.5, lineHeight: 1.55, margin: 0, color: "#cfd6de" }}>{s.report.story}</p>
                       </div>
                       <div style={{ background: "rgba(201,162,39,0.08)", border: "1px dashed #c9a22766", borderRadius: 6, padding: "8px 12px", fontSize: 13, color: "#cfd6de" }}>
-                        💡 <b style={{ color: "#f0e8d2" }}>Tiesitkö?</b> {s.report.fact}
+                        {t("didYouKnow")} {s.report.fact}
                       </div>
                     </div>
                     <div>
-                      <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 1.2, color: "#93a3ba", marginBottom: 6 }}>Vuosi vuodelta</div>
+                      <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 1.2, color: "#93a3ba", marginBottom: 6 }}>{t("yearByYearLabel")}</div>
                       <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
                         {s.report.years.map((y) => (
                           <div key={y.year} style={{ display: "flex", gap: 8, alignItems: "flex-start", padding: "5px 8px", borderRadius: 6, background: y.primary ? "rgba(201,162,39,0.14)" : "rgba(255,255,255,0.03)", border: y.primary ? "1px solid #c9a22766" : "1px solid transparent" }}>
@@ -1426,11 +2438,11 @@ function Yhteiskunta() {
                           </div>
                         ))}
                       </div>
-                      <div style={{ fontSize: 10.5, color: "#93a3ba", marginTop: 4 }}>★ = tapahtuma, joka todella vaikutti tämän jakson laskelmiin</div>
+                      <div style={{ fontSize: 10.5, color: "#93a3ba", marginTop: 4 }}>{t("yearByYearNote")}</div>
                     </div>
                   </div>
                   <details style={{ marginTop: 10 }}>
-                    <summary style={{ cursor: "pointer", fontSize: 13, color: "#c9a227", fontWeight: 600 }}>Näytä luvut ▸</summary>
+                    <summary style={{ cursor: "pointer", fontSize: 13, color: "#c9a227", fontWeight: 600 }}>{t("showNumbers")}</summary>
                     <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, marginTop: 8 }}>
                       <tbody>
                         {s.report.rows.map(([k, v]) => (
@@ -1443,21 +2455,21 @@ function Yhteiskunta() {
                     </table>
                   </details>
                   <div style={{ textAlign: "center", marginTop: 14 }}>
-                    <button className="btn" style={{ padding: "10px 20px", fontSize: 15 }} onClick={() => setReportOpen(false)}>Sulje ✕</button>
+                    <button className="btn" style={{ padding: "10px 20px", fontSize: 15 }} onClick={() => setReportOpen(false)}>{t("closeBtn")}</button>
                   </div>
                 </div>
               </div>
               )}
 
             <div className="grid2">
-              <Section title="Työvoiman jako" open={allocOpen} onToggle={() => setAllocOpen(!allocOpen)}>
+              <Section title={t("workforceTitle")} open={allocOpen} onToggle={() => setAllocOpen(!allocOpen)}>
                 {(() => {
                   const maxAllocVal = Math.max(...SECTORS.map((x) => alloc[x.key]));
                   return SECTORS.map(({ key, name, icon }) => (
                   <div key={key} style={{ marginBottom: 13 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontSize: 14, marginBottom: 5, color: "#e9e2cf" }}>
-                      <span>{icon} {name}</span>
-                      <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontWeight: 600, color: "#c9a227" }}>{alloc[key]} % · {fmt((s.workers * alloc[key]) / 100)} hlö</span>
+                      <span>{icon} {tc("sectors", key, "name", name)}</span>
+                      <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontWeight: 600, color: "#c9a227" }}>{alloc[key]} % · {fmt((s.workers * alloc[key]) / 100)} {t("personsUnit")}</span>
                     </div>
                     <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                       <button className="step" onClick={() => setAlloc(key, alloc[key] - 5)} disabled={!!s.gameOver || alloc[key] <= 0}>−5</button>
@@ -1472,9 +2484,9 @@ function Yhteiskunta() {
                     {key === "farm" && (
                       <div style={{ marginTop: 6, paddingLeft: 4, borderLeft: "2px solid #263a54" }}>
                         <div style={{ fontSize: 12, color: "#93a3ba", marginBottom: 4 }}>
-                          🚜 Maatalouden suuntaus <InfoButton title="Maatalouden suuntaus" text="Pienviljely on tasainen ja saatavilla heti. Suurtilat (Teollisesta) nostavat satoa mutta lisäävät saasteita ja herkkyyttä häiriöille. Bioviljely (Modernista) on kestävää ja puhdasta, mutta tuottaa vähemmän. Erikoistuotteet (Teollisesta) tuovat vaurautta ruokaturvan kustannuksella." />
+                          {t("farmModeLabel")} <InfoButton title={t("farmModeInfoTitle")} text={t("farmModeInfoText")} />
                         </div>
-                        <ModeSelector modes={FARM_MODES} current={s.farmMode} onSelect={setFarmMode} eraIdx={s.era} disabled={!!s.gameOver} />
+                        <ModeSelector modes={FARM_MODES} current={s.farmMode} onSelect={setFarmMode} eraIdx={s.era} disabled={!!s.gameOver} table="farmModes" />
                       </div>
                     )}
 
@@ -1483,7 +2495,7 @@ function Yhteiskunta() {
                         {s.era >= 1 ? (
                           <>
                             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#93a3ba", marginBottom: 4 }}>
-                              <span>🏥 Ehkäisevä ↔ Sairaalapainotteinen</span>
+                              <span>{t("healthFocusLabel")}</span>
                               <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontWeight: 600, color: "#c9a227" }}>{s.healthFocus}%</span>
                             </div>
                             <div style={{ display: "flex", gap: 5, alignItems: "center", marginBottom: 6 }}>
@@ -1492,12 +2504,12 @@ function Yhteiskunta() {
                                 <div style={{ width: `${s.healthFocus}%`, height: "100%", background: "linear-gradient(90deg,#a3822a,#c9a227)" }} />
                               </div>
                               <button className="step" style={{ minWidth: 34, height: 32, fontSize: 13 }} onClick={() => setHealthFocus(s.healthFocus + 10)} disabled={!!s.gameOver || s.healthFocus >= 100}>+10</button>
-                              <InfoButton title="Ehkäisevä vs sairaalapainotteinen hoito" text="Ehkäisevä painotus (arvo lähellä 0 %) suojaa erityisesti lapsia ja hillitsee epidemioita. Sairaalapainotteinen hoito (arvo lähellä 100 %) pelastaa paremmin aikuisia ja vanhuksia akuuteissa tilanteissa. Kumpikaan ei ole ylivoimainen — valinta riippuu siitä, minkä ikäryhmän suojelu on juuri nyt tärkeintä." />
+                              <InfoButton title={t("healthFocusInfoTitle")} text={t("healthFocusInfoText")} />
                             </div>
                             {s.era >= 2 ? (
                               <>
                                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#93a3ba", marginBottom: 4 }}>
-                                  <span>🩺 Erikoislääkärien osuus</span>
+                                  <span>{t("specialistLabel")}</span>
                                   <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontWeight: 600, color: "#c9a227" }}>{s.specialistShare}%</span>
                                 </div>
                                 <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
@@ -1506,15 +2518,15 @@ function Yhteiskunta() {
                                     <div style={{ width: `${s.specialistShare}%`, height: "100%", background: "linear-gradient(90deg,#a3822a,#c9a227)" }} />
                                   </div>
                                   <button className="step" style={{ minWidth: 34, height: 32, fontSize: 13 }} onClick={() => setSpecialistShare(s.specialistShare + 10)} disabled={!!s.gameOver || s.specialistShare >= 100}>+10</button>
-                                  <InfoButton title="Erikoislääkärien osuus" text="Erikoislääkäri kattaa 1,4× yleislääkärin verran — vaativampi koulutuspolku, mutta parempi hoitotulos raskaammissa tapauksissa." />
+                                  <InfoButton title={t("specialistInfoTitle")} text={t("specialistInfoText")} />
                                 </div>
                               </>
                             ) : (
-                              <div style={{ fontSize: 10.5, color: "#93a3ba" }}>🔒 Erikoislääkärit avautuvat Teollisesta aikakaudesta.</div>
+                              <div style={{ fontSize: 10.5, color: "#93a3ba" }}>{t("specialistLockedEarly")}</div>
                             )}
                           </>
                         ) : (
-                          <div style={{ fontSize: 10.5, color: "#93a3ba" }}>🔒 Terveydenhuollon säädöt avautuvat Varhaisteollisesta aikakaudesta.</div>
+                          <div style={{ fontSize: 10.5, color: "#93a3ba" }}>{t("healthLockedEarly")}</div>
                         )}
                       </div>
                     )}
@@ -1524,7 +2536,7 @@ function Yhteiskunta() {
                         {s.era >= 1 ? (
                           <>
                             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#93a3ba", marginBottom: 4 }}>
-                              <span>🔬 Perustutkimus ↔ Soveltava tutkimus</span>
+                              <span>{t("appliedLabel")}</span>
                               <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontWeight: 600, color: "#c9a227" }}>{s.appliedShare}%</span>
                             </div>
                             <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
@@ -1533,11 +2545,11 @@ function Yhteiskunta() {
                                 <div style={{ width: `${s.appliedShare}%`, height: "100%", background: "linear-gradient(90deg,#a3822a,#c9a227)" }} />
                               </div>
                               <button className="step" style={{ minWidth: 34, height: 32, fontSize: 13 }} onClick={() => setAppliedShare(s.appliedShare + 10)} disabled={!!s.gameOver || s.appliedShare >= 100}>+10</button>
-                              <InfoButton title="Perustutkimus vs soveltava tutkimus" text="Soveltava tutkimus (arvo lähellä 100 %) nostaa tuotannon tehokkuutta heti, mutta hidastaa tutkimuspisteiden kertymistä jopa 40 %. Perustutkimus (arvo lähellä 0 %) on hitaampaa hyödyntää mutta vie aikakautta eteenpäin nopeimmin." />
+                              <InfoButton title={t("appliedInfoTitle")} text={t("appliedInfoText")} />
                             </div>
                           </>
                         ) : (
-                          <div style={{ fontSize: 10.5, color: "#93a3ba" }}>🔒 Tutkimuksen suuntaaminen avautuu Varhaisteollisesta aikakaudesta.</div>
+                          <div style={{ fontSize: 10.5, color: "#93a3ba" }}>{t("researchLockedEarly")}</div>
                         )}
                       </div>
                     )}
@@ -1545,9 +2557,9 @@ function Yhteiskunta() {
                     {key === "edu" && (
                       <div style={{ marginTop: 6, paddingLeft: 4, borderLeft: "2px solid #263a54" }}>
                         <div style={{ fontSize: 12, color: "#93a3ba", marginBottom: 4 }}>
-                          🎒 Opetuksen suuntaus <InfoButton title="Opetuksen suuntaus" text="Peruskoulutus on tasainen ja avoinna heti. Ammatillinen koulutus (Varhaisteollisesta) nostaa tuotannon tehokkuutta. Korkeakoulutus (Teollisesta) nostaa tutkimusta merkittävästi, mutta tavoittaa harvemman." />
+                          {t("eduModeLabel")} <InfoButton title={t("eduModeInfoTitle")} text={t("eduModeInfoText")} />
                         </div>
-                        <ModeSelector modes={EDU_MODES} current={s.eduMode} onSelect={setEduMode} eraIdx={s.era} disabled={!!s.gameOver} />
+                        <ModeSelector modes={EDU_MODES} current={s.eduMode} onSelect={setEduMode} eraIdx={s.era} disabled={!!s.gameOver} table="eduModes" />
                       </div>
                     )}
 
@@ -1556,7 +2568,7 @@ function Yhteiskunta() {
                         {s.era >= 2 ? (
                           <>
                             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#93a3ba", marginBottom: 4 }}>
-                              <span>🕵️ Rikostutkijoiden osuus</span>
+                              <span>{t("detectiveLabel")}</span>
                               <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontWeight: 600, color: "#c9a227" }}>{s.detectiveShare}%</span>
                             </div>
                             <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
@@ -1565,11 +2577,11 @@ function Yhteiskunta() {
                                 <div style={{ width: `${s.detectiveShare}%`, height: "100%", background: "linear-gradient(90deg,#a3822a,#c9a227)" }} />
                               </div>
                               <button className="step" style={{ minWidth: 34, height: 32, fontSize: 13 }} onClick={() => setDetectiveShare(s.detectiveShare + 10)} disabled={!!s.gameOver || s.detectiveShare >= 100}>+10</button>
-                              <InfoButton title="Rikostutkijat" text="Rikostutkijoihin erikoistuva osa hallinnosta laskee rikollisuutta suoraan (jopa −35 % täydellä osuudella), mutta vie resursseja yleisestä hallintokattavuudesta (−15 % täydellä osuudella)." />
+                              <InfoButton title={t("detectiveInfoTitle")} text={t("detectiveInfoText")} />
                             </div>
                           </>
                         ) : (
-                          <div style={{ fontSize: 10.5, color: "#93a3ba" }}>🔒 Rikostutkijat avautuvat Teollisesta aikakaudesta.</div>
+                          <div style={{ fontSize: 10.5, color: "#93a3ba" }}>{t("adminLockedEarly")}</div>
                         )}
                       </div>
                     )}
@@ -1579,7 +2591,7 @@ function Yhteiskunta() {
                         {s.era >= 1 ? (
                           <>
                             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#93a3ba", marginBottom: 4 }}>
-                              <span>⚙️ Perustuotanto ↔ Erikoistunut teollisuus</span>
+                              <span>{t("industryLabel")}</span>
                               <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontWeight: 600, color: "#c9a227" }}>{s.industryFocus}%</span>
                             </div>
                             <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
@@ -1588,11 +2600,11 @@ function Yhteiskunta() {
                                 <div style={{ width: `${s.industryFocus}%`, height: "100%", background: "linear-gradient(90deg,#a3822a,#c9a227)" }} />
                               </div>
                               <button className="step" style={{ minWidth: 34, height: 32, fontSize: 13 }} onClick={() => setIndustryFocus(s.industryFocus + 10)} disabled={!!s.gameOver || s.industryFocus >= 100}>+10</button>
-                              <InfoButton title="Perustuotanto vs erikoistunut teollisuus" text="Erikoistunut teollisuus (arvo lähellä 100 %) nostaa tehokkuutta, tutkimusta ja BKT:ta, mutta saastuttaa selvästi enemmän kuin perustuotanto." />
+                              <InfoButton title={t("industryInfoTitle")} text={t("industryInfoText")} />
                             </div>
                           </>
                         ) : (
-                          <div style={{ fontSize: 10.5, color: "#93a3ba" }}>🔒 Teollisuuden suuntaaminen avautuu Varhaisteollisesta aikakaudesta.</div>
+                          <div style={{ fontSize: 10.5, color: "#93a3ba" }}>{t("industryLockedEarly")}</div>
                         )}
                       </div>
                     )}
@@ -1600,11 +2612,11 @@ function Yhteiskunta() {
                   ));
                 })()}
                 <div style={{ fontSize: 12, color: "#93a3ba" }}>
-                  Työnjaon säännöt <InfoButton title="Työnjaon säännöt" text="Lisätty työvoima otetaan aina suurimmasta sektorista (yleensä pelloilta), ja vapautettu palaa sinne — summa on aina 100 %." />
+                  {t("workforceRules")} <InfoButton title={t("workforceRules")} text={t("workforceRulesText")} />
                 </div>
               </Section>
 
-              <Section title="Ammattijakauma" open={profOpen} onToggle={() => setProfOpen(!profOpen)}>
+              <Section title={t("professionsTitle")} open={profOpen} onToggle={() => setProfOpen(!profOpen)}>
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
                   <tbody>
                     {professions.map((p) => (
@@ -1613,18 +2625,18 @@ function Yhteiskunta() {
                         <td style={{ textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", fontWeight: 600, color: "#e9e2cf" }}>{fmt(p.n)}</td>
                       </tr>
                     ))}
-                    <tr><td style={{ padding: "6px 4px", color: "#93a3ba" }}>Työvoiman ulkopuolella (lapset & vanhukset)</td>
+                    <tr><td style={{ padding: "6px 4px", color: "#93a3ba" }}>{t("outsideWorkforce")}</td>
                       <td style={{ textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", color: "#93a3ba" }}>{fmt(s.children + s.elderly)}</td></tr>
                   </tbody>
                 </table>
                 <div style={{ marginTop: 10, fontSize: 13, color: "#93a3ba" }}>
-                  Aikakauden tausta <InfoButton title={era.name} text={`${era.desc} ${era.hist}`} />
+                  {t("eraBackground")} <InfoButton title={TE(lang, s.era, "name", era.name)} text={`${TE(lang, s.era, "desc", era.desc)} ${TE(lang, s.era, "hist", era.hist)}`} />
                 </div>
               </Section>
             </div>
 
             <div style={{ textAlign: "center", margin: "18px 0" }}>
-              <button className="btn" style={{ width: "100%", maxWidth: 420 }} onClick={nextTurn} disabled={!!s.gameOver}>Etene 5 vuotta →</button>
+              <button className="btn" style={{ width: "100%", maxWidth: 420 }} onClick={nextTurn} disabled={!!s.gameOver}>{t("nextTurnBtn")}</button>
             </div>
 
             {infoModal && (
@@ -1641,20 +2653,20 @@ function Yhteiskunta() {
 
             <div className="grid-graphlog">
               <div className="paper" style={{ padding: 10 }}>
-                <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 14, margin: "0 0 4px", color: "#f0e8d2" }}>Väestökehitys</h2>
+                <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 14, margin: "0 0 4px", color: "#f0e8d2" }}>{t("populationChartTitle")}</h2>
                 <ResponsiveContainer width="100%" height={90}>
                   <LineChart data={s.history} margin={{ top: 5, right: 6, bottom: 0, left: 0 }}>
                     <CartesianGrid stroke="#263a54" strokeDasharray="3 3" />
                     <XAxis dataKey="year" stroke="#93a3ba" fontSize={10} />
                     <YAxis stroke="#93a3ba" fontSize={10} tickFormatter={(v) => (v >= 1000 ? v / 1000 + "k" : v)} width={32} />
-                    <Tooltip formatter={(v) => [fmt(v), "Väestö"]} labelFormatter={(y) => "Vuosi " + y} contentStyle={{ background: "#0d1c30", border: "1px solid #2a3d57", fontFamily: "'IBM Plex Mono',monospace", fontSize: 12, color: "#e9e2cf" }} />
+                    <Tooltip formatter={(v) => [fmt(v), t("statPop")]} labelFormatter={t("yearAxisLabel")} contentStyle={{ background: "#0d1c30", border: "1px solid #2a3d57", fontFamily: "'IBM Plex Mono',monospace", fontSize: 12, color: "#e9e2cf" }} />
                     <Line type="monotone" dataKey="pop" stroke="#c9a227" strokeWidth={2} dot={false} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
 
               <div className="paper" style={{ padding: 10 }}>
-                <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 14, margin: "0 0 4px", color: "#f0e8d2" }}>Aikakirjat</h2>
+                <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 14, margin: "0 0 4px", color: "#f0e8d2" }}>{t("logTitle")}</h2>
                 <div style={{ maxHeight: 110, overflowY: "auto" }}>
                   {s.log.map((l, i) => (
                     <div key={i} style={{ padding: "3px 6px", fontSize: 12.5, borderLeft: `3px solid ${l.tone === "bad" ? "#c96a5a" : l.tone === "good" ? "#7fbf8f" : "#93a3ba"}`, marginBottom: 3, background: "rgba(255,255,255,0.03)", color: "#cfd6de" }}>
@@ -1671,17 +2683,17 @@ function Yhteiskunta() {
           <div style={{ position: "fixed", inset: 0, background: "rgba(6,12,22,0.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 10, padding: 12 }}>
             <div className="modal-panel" style={{ maxWidth: 480, width: "100%", textAlign: "center", padding: 24, maxHeight: "90vh", overflowY: "auto" }}>
               <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 28, margin: "0 0 10px", color: s.gameOver.win ? "#7fbf8f" : "#c96a5a" }}>
-                {s.gameOver.win ? "Sivilisaatio kukoistaa" : "Yhteisö romahti"}
+                {s.gameOver.win ? t("civilizationWins") : t("civilizationCollapsed")}
               </h2>
               <p style={{ fontSize: 16, margin: "0 0 8px", color: "#cfd6de" }}>{s.gameOver.text}</p>
 
               <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 40, fontWeight: 700, color: "#c9a227", margin: "6px 0 2px" }}>{fmt(score.total)}</div>
-              <div style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: 1.5, color: "#93a3ba", marginBottom: 8 }}>Sivilisaatioindeksi</div>
+              <div style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: 1.5, color: "#93a3ba", marginBottom: 8 }}>{t("civIndexLabel")}</div>
               <table style={{ width: "100%", fontSize: 13, borderCollapse: "collapse", marginBottom: 12 }}>
                 <tbody>
                   {Object.entries(score.parts).map(([k, v]) => (
                     <tr key={k} style={{ borderBottom: "1px dotted #263a54" }}>
-                      <td style={{ textAlign: "left", padding: "3px 4px", color: "#cfd6de" }}>{k}</td>
+                      <td style={{ textAlign: "left", padding: "3px 4px", color: "#cfd6de" }}>{t(k)}</td>
                       <td style={{ textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", fontWeight: 600, color: "#e9e2cf" }}>{fmt(v)}</td>
                     </tr>
                   ))}
@@ -1690,42 +2702,42 @@ function Yhteiskunta() {
 
               {window.storage && (
                 <div style={{ background: "#12233a", border: "1px solid #2a3d57", borderRadius: 8, padding: 12, marginBottom: 12 }}>
-                  <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 17, fontWeight: 700, marginBottom: 8, color: "#f0e8d2" }}>🏆 Yhteinen tulostaulu</div>
+                  <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 17, fontWeight: 700, marginBottom: 8, color: "#f0e8d2" }}>{t("leaderboardTitle")}</div>
                   {!scoreSaved ? (
                     <div style={{ display: "flex", gap: 8 }}>
-                      <input value={playerName} onChange={(e) => setPlayerName(e.target.value)} placeholder="Nimesi tulostaululle" maxLength={20}
+                      <input value={playerName} onChange={(e) => setPlayerName(e.target.value)} placeholder={t("leaderboardNamePlaceholder")} maxLength={20}
                         style={{ flex: 1, padding: "10px 12px", fontSize: 15, fontFamily: "'Source Sans 3',sans-serif", color: "#e9e2cf", border: "1.5px solid #c9a22766", borderRadius: 8, background: "#0d1c30", minWidth: 0 }} />
-                      <button className="btn" style={{ padding: "10px 16px", fontSize: 15 }} onClick={submitScore} disabled={!playerName.trim()}>Tallenna</button>
+                      <button className="btn" style={{ padding: "10px 16px", fontSize: 15 }} onClick={submitScore} disabled={!playerName.trim()}>{t("saveBtn")}</button>
                     </div>
                   ) : (
-                    <div style={{ color: "#7fbf8f", fontSize: 14, fontWeight: 600 }}>✓ Tulos tallennettu!</div>
+                    <div style={{ color: "#7fbf8f", fontSize: 14, fontWeight: 600 }}>{t("scoreSaved")}</div>
                   )}
-                  <div style={{ fontSize: 11, color: "#93a3ba", marginTop: 6 }}>Nimi ja tulos näkyvät kaikille tämän pelin pelaajille.</div>
+                  <div style={{ fontSize: 11, color: "#93a3ba", marginTop: 6 }}>{t("leaderboardVisibility")}</div>
                   {board && board.length > 0 && (
                     <table style={{ width: "100%", fontSize: 13, borderCollapse: "collapse", marginTop: 10 }}>
                       <tbody>
                         {board.slice(0, 10).map((r, i) => (
                           <tr key={i} style={{ borderBottom: "1px dotted #263a54", background: scoreSaved && r.name === playerName.trim() && r.score === score.total ? "rgba(201,162,39,0.12)" : "transparent" }}>
                             <td style={{ textAlign: "left", padding: "3px 4px", fontFamily: "'IBM Plex Mono',monospace", color: "#93a3ba" }}>{i + 1}.</td>
-                            <td style={{ textAlign: "left", padding: "3px 4px", color: "#cfd6de" }}>{r.icon} {r.name} <span style={{ color: "#93a3ba", fontSize: 11 }}>({r.civ}{r.win ? " · voitto" : ""})</span></td>
+                            <td style={{ textAlign: "left", padding: "3px 4px", color: "#cfd6de" }}>{r.icon} {r.name} <span style={{ color: "#93a3ba", fontSize: 11 }}>({r.civ}{r.win ? ` ${t("leaderboardWin")}` : ""})</span></td>
                             <td style={{ textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", fontWeight: 600, color: "#e9e2cf" }}>{fmt(r.score)}</td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   )}
-                  {board && board.length === 0 && <div style={{ fontSize: 13, color: "#93a3ba", marginTop: 8 }}>Ole ensimmäinen tulostaululla!</div>}
+                  {board && board.length === 0 && <div style={{ fontSize: 13, color: "#93a3ba", marginTop: 8 }}>{t("leaderboardEmpty")}</div>}
                 </div>
               )}
 
-              <p style={{ fontSize: 13, color: "#93a3ba", margin: "0 0 10px" }}>Väestöhuippu: {fmt(Math.max(...s.history.map((h) => h.pop)))} · Vuosia: {s.year}</p>
-              <button className="btn" onClick={() => { setS(makeStart(null)); setScoreSaved(false); setBoard(null); setPendingCiv(null); setChosenSkills([]); setVillageNameInput(""); }}>Valitse uusi sivilisaatio ↺</button>
+              <p style={{ fontSize: 13, color: "#93a3ba", margin: "0 0 10px" }}>{t("peakPopLine")(fmt(Math.max(...s.history.map((h) => h.pop))), s.year)}</p>
+              <button className="btn" onClick={() => { setS(makeStart(null, "", [], s.lang)); setScoreSaved(false); setBoard(null); setPendingCiv(null); setChosenSkills([]); setVillageNameInput(""); }}>{t("restartBtn")}</button>
             </div>
           </div>
         )}
 
         <footer style={{ textAlign: "center", fontSize: 12, color: "#93a3ba", margin: "20px 0 8px" }}>
-          Malli on karkea yksinkertaistus — mutta suhdeluvut (viljelijän tuottavuus, 1,8 % terveydenhuoltoon, 1 opettaja / 20 lasta) pohjaavat historiallisiin arvioihin.
+          {t("footerNote")}
         </footer>
       </div>
     </div>
@@ -1739,4 +2751,5 @@ root.render(React.createElement(Yhteiskunta));
 </script>
 </body>
 </html>
+
 
