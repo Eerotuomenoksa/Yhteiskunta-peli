@@ -194,6 +194,7 @@
         <button type="button" data-lang="fi">FI</button>
         <button type="button" data-lang="sv">SV</button>
         <button type="button" data-lang="en">EN</button>
+        <button type="button" data-lang="da">DA</button>
       </div>
       <a class="btn btn-gold btn-nav" href="game/yhteiskunta.html" data-i18n="ctaPlay">Pelaa ilmaiseksi</a>
     </div>
@@ -213,6 +214,7 @@
       <button type="button" data-lang="fi">FI</button>
       <button type="button" data-lang="sv">SV</button>
       <button type="button" data-lang="en">EN</button>
+      <button type="button" data-lang="da">DA</button>
     </div>
     <a class="btn btn-gold btn-nav" href="game/yhteiskunta.html" data-i18n="ctaPlay" style="justify-content:center">Pelaa ilmaiseksi</a>
   </div>
@@ -359,8 +361,8 @@
 
 <script>
 (function () {
-  // Kevyt i18n-runko: fi on täysi sanakirja, sv/en ovat tyhjät kannat myöhempää käännöstyötä varten.
-  // Kun käännös puuttuu valitusta kielestä, käytetään suomea varajärjestelmänä (sama periaate kuin pelissä).
+  // Kevyt i18n-runko: kaikki neljä kieltä on nyt käännetty. Kun käännös puuttuu jostain avaimesta,
+  // käytetään suomea varajärjestelmänä (sama periaate kuin pelissä).
   var I18N = {
     fi: {
       logo: "Yhteiskunta", navGame: "Peli", navSchools: "Kouluille", navPricing: "Hinnat", navContact: "Yhteys",
@@ -388,8 +390,84 @@
       footerTagline: "Suomenkielinen yhteiskuntasimulaatio yläkouluun ja lukioon",
       footerContactLabel: "Ota yhteyttä", footerContactSoon: "Sähköposti tulossa pian",
     },
-    sv: {},
-    en: {},
+    sv: {
+      logo: "Yhteiskunta", navGame: "Spelet", navSchools: "För skolor", navPricing: "Priser", navContact: "Kontakt",
+      ctaPlay: "Spela gratis", ctaPlayArrow: "Spela gratis →", ctaSeePricing: "Se priser för skolor",
+      heroEyebrow: "Ett läromedel för historia- och samhällskunskapslektioner",
+      heroTitle: "Led ett samhälle från jordbrukssamhället till nutiden",
+      heroLead: "Eleven lär sig inte bara vad som hände — hen upplever varför samhällen förändrades. Direkt i webbläsaren, utan installation.",
+      value1Title: "Lärande genom orsak och verkan",
+      value1Text: "Varje mekanik speglar historisk kausalitet: varför urbaniseringen tog fart, varför demokrati krävde vissa förutsättningar.",
+      value2Title: "Fungerar direkt i webbläsaren",
+      value2Text: "Inga installationer, inga konton, inga krav på utrustning. Öppna länken så kan lektionen börja — även på skolans låsta enheter.",
+      value3Title: "Ett verktyg för läraren",
+      value3Text: "Klassrumsvyn samlar spelsessionens milstolpar, poäng och diskussionsfrågor direkt till lektionsmaterial.",
+      pricingTitle: "Priser", pricingLead: "Grundversionen är alltid gratis. Skollicensen faktureras per läsår.",
+      freeEyebrow: "Gratis", freeSub: "Civilisationen Norden",
+      freeLi1: "Hela spelet från jordbrukssamhället till nutiden", freeLi2: "Alla sex mätvärden", freeLi3: "Fungerar på alla enheter",
+      freeBtn: "Spela nu",
+      basicBadge: "För skolor", basicEyebrow: "Skollicens Basic", perYear: " /läsår", basicSub: "Obegränsad användning i hela skolan",
+      basicLi1: "Alla civilisationer och allt innehåll", basicLi2: "Lärarhandledning + lektionsplaner", basicLi3: "Kopplingar till läroplanen (LOPS/POPS)",
+      contactBtn: "Kontakta oss",
+      plusEyebrow: "Skollicens Plus", plusSub: "Basic + lärarpanel",
+      plusLi1: "Klassrapporter och analys", plusLi2: "Lärarens administrationspanel", plusLi3: "Prioriterad support",
+      dlcStrong: "Nationalstats-DLC:er", dlcText: "för spelare 4,90–7,90 € / paket",
+      municipalStrong: "Kommunlicens", municipalText: "för alla skolor i kommunen — begär offert",
+      footerTagline: "Samhällssimulation för högstadiet och gymnasiet",
+      footerContactLabel: "Kontakta oss", footerContactSoon: "E-post kommer snart",
+    },
+    en: {
+      logo: "Yhteiskunta", navGame: "Game", navSchools: "For Schools", navPricing: "Pricing", navContact: "Contact",
+      ctaPlay: "Play for free", ctaPlayArrow: "Play for free →", ctaSeePricing: "See pricing for schools",
+      heroEyebrow: "An educational game for history and social studies classes",
+      heroTitle: "Lead a society from the agrarian age to the present",
+      heroLead: "The student doesn't just learn what happened — they experience why societies changed. Right in the browser, no installs needed.",
+      value1Title: "Cause-and-effect learning",
+      value1Text: "Every mechanic models historical causality: why urbanization accelerated, why democracy required certain preconditions.",
+      value2Title: "Works instantly in the browser",
+      value2Text: "No installs, no accounts, no hardware requirements. Open the link and the lesson can begin — even on locked-down school devices.",
+      value3Title: "A tool for teachers",
+      value3Text: "The classroom presentation view gathers the session's milestones, scores and discussion questions directly into lesson material.",
+      pricingTitle: "Pricing", pricingLead: "The base version is always free. School licenses are billed per school year.",
+      freeEyebrow: "Free", freeSub: "The North civilization",
+      freeLi1: "The whole game, from the agrarian age to the present", freeLi2: "All six metrics", freeLi3: "Works on every device",
+      freeBtn: "Play now",
+      basicBadge: "For Schools", basicEyebrow: "School License Basic", perYear: " /school year", basicSub: "Unlimited use across the whole school",
+      basicLi1: "All civilizations and content", basicLi2: "Teacher's guide + lesson plans", basicLi3: "Curriculum links (LOPS/POPS)",
+      contactBtn: "Contact us",
+      plusEyebrow: "School License Plus", plusSub: "Basic + teacher dashboard",
+      plusLi1: "Class reports and analytics", plusLi2: "Teacher admin dashboard", plusLi3: "Priority support",
+      dlcStrong: "Nation-state DLCs", dlcText: "for players, €4.90–7.90 / pack",
+      municipalStrong: "Municipality license", municipalText: "for every school in a municipality — request a quote",
+      footerTagline: "A society simulation for middle and high school",
+      footerContactLabel: "Contact us", footerContactSoon: "Email coming soon",
+    },
+    da: {
+      logo: "Yhteiskunta", navGame: "Spillet", navSchools: "Til skoler", navPricing: "Priser", navContact: "Kontakt",
+      ctaPlay: "Spil gratis", ctaPlayArrow: "Spil gratis →", ctaSeePricing: "Se priser for skoler",
+      heroEyebrow: "Et undervisningsspil til historie- og samfundsfagstimer",
+      heroTitle: "Led et samfund fra landbrugssamfundet til nutiden",
+      heroLead: "Eleven lærer ikke kun, hvad der skete — hun eller han oplever, hvorfor samfund forandrede sig. Direkte i browseren, uden installation.",
+      value1Title: "Læring gennem årsag og virkning",
+      value1Text: "Hver mekanik afspejler historisk kausalitet: hvorfor urbaniseringen tog fart, hvorfor demokrati krævede bestemte forudsætninger.",
+      value2Title: "Fungerer med det samme i browseren",
+      value2Text: "Ingen installation, ingen konti, ingen krav til udstyr. Åbn linket, og lektionen kan begynde — også på skolens låste enheder.",
+      value3Title: "Et værktøj til læreren",
+      value3Text: "Klasseværelsesvisningen samler spilsessionens milepæle, point og refleksionsspørgsmål direkte til undervisningsmateriale.",
+      pricingTitle: "Priser", pricingLead: "Grundversionen er altid gratis. Skolelicensen faktureres pr. skoleår.",
+      freeEyebrow: "Gratis", freeSub: "Civilisationen Norden",
+      freeLi1: "Hele spillet fra landbrugssamfundet til nutiden", freeLi2: "Alle seks nøgletal", freeLi3: "Fungerer på alle enheder",
+      freeBtn: "Spil nu",
+      basicBadge: "Til skoler", basicEyebrow: "Skolelicens Basic", perYear: " /skoleår", basicSub: "Ubegrænset brug på hele skolen",
+      basicLi1: "Alle civilisationer og alt indhold", basicLi2: "Lærervejledning + undervisningsplaner", basicLi3: "Koblinger til læreplanen (LOPS/POPS)",
+      contactBtn: "Kontakt os",
+      plusEyebrow: "Skolelicens Plus", plusSub: "Basic + lærerpanel",
+      plusLi1: "Klasserapporter og analyse", plusLi2: "Lærerens administrationspanel", plusLi3: "Prioriteret support",
+      dlcStrong: "Nationalstats-DLC'er", dlcText: "til spillere 4,90–7,90 € / pakke",
+      municipalStrong: "Kommunelicens", municipalText: "til alle skoler i kommunen — bed om et tilbud",
+      footerTagline: "Samfundssimulation til udskolingen og gymnasiet",
+      footerContactLabel: "Kontakt os", footerContactSoon: "E-mail kommer snart",
+    },
   };
 
   var STORAGE_KEY = "yhteiskunta-site-lang";
