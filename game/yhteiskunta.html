@@ -6,8 +6,9 @@
 <title>Yhteiskunta — Society</title>
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/prop-types@15/prop-types.min.js"></script>
 <script src="https://unpkg.com/recharts@2/umd/Recharts.js"></script>
-<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7/babel.min.js"></script>
 <style>
   html, body { margin: 0; padding: 0; }
   #root { min-height: 100vh; }
@@ -90,21 +91,8 @@ const INVENTIONS_BY_ERA = [
     { name: "Tekoäly", desc: "koneet alkavat avustaa tutkimusta ja päätöksentekoa." } ],
 ];
 
-// ============ TARINAN TYYLI AIKAKAUSITTAIN ============
-// Sama tarinageneraattori, mutta jokainen aikakausi "kertoo" hieman eri äänellä, ettei formaatti puutu.
-const STORY_VOICE = [
-  { tag: "", tone: "Vanhat kertovat" },
-  { tag: "", tone: "Lehti kirjoittaa" },
-  { tag: "", tone: "Raportti toteaa" },
-  { tag: "", tone: "Verkossa kerrotaan" },
-];
-// Visuaalinen ilme raporttimodalille aikakausittain: fontit, värit ja CSS-luokka joka ohjaa asettelua.
-const REPORT_STYLES = [
-  { cls: "rp-folk", masthead: null, bg: "rgba(252,246,232,0.92)", headFont: "'Playfair Display', serif", bodyFont: "'Crimson Pro', Georgia, serif", accent: "#7a5c2e" },
-  { cls: "rp-news", masthead: "SANOMALEHTI", bg: "#f2ecd8", headFont: "'Playfair Display', serif", bodyFont: "Georgia, 'Times New Roman', serif", accent: "#2c2416" },
-  { cls: "rp-stat", masthead: "TILASTORAPORTTI", bg: "#eef2f2", headFont: "'IBM Plex Mono', monospace", bodyFont: "'IBM Plex Mono', monospace", accent: "#2f5a5a" },
-  { cls: "rp-feed", masthead: "PÄIVITYS", bg: "#eaf1fb", headFont: "system-ui, sans-serif", bodyFont: "system-ui, sans-serif", accent: "#2a5c8a" },
-];
+// Kultainen aikakausittainen "ääni"-tunniste kertomuskortin yläpuolelle (museo-ilme: sama korttipohja joka aikakaudella).
+const STORY_LABELS = ["Vanhat kertovat", "Lehti kirjoittaa", "Raportti toteaa", "Verkossa kerrotaan"];
 // health = lisä terveyskattavuuteen, resilience = katastrofien vakavuuskerroin (pienempi = kestävämpi),
 // minPop = aikakausien väestövaatimuksen kerroin, store = varastokerroin
 const CIVS = [
@@ -402,7 +390,7 @@ function Yhteiskunta() {
   const pop = s.children + s.workers + s.elderly;
   const era = ERAS[s.era];
   const nextEra = ERAS[s.era + 1];
-  const M = combinedMods(s.civ, s.nation, s.startSkills);
+  const M = useMemo(() => combinedMods(s.civ, s.nation, s.startSkills), [s.civ, s.nation, s.startSkills]);
   const eraMinPop = Math.round(era.minPop * M.minPop);
 
   const alloc = s.alloc;
@@ -567,7 +555,7 @@ function Yhteiskunta() {
   const professions = useMemo(() => {
     const w = (k) => Math.round((s.workers * alloc[k]) / 100);
     return [
-      { name: "Viljelijät ja karjanhoitajat", n: w("farm"), note: `1 ruokkii ${Math.round(era.feeds * M.farm)}` },
+      { name: "Viljelijät ja karjanhoitajat", n: w("farm"), note: `1 ruokkii ${Math.round(era.feeds * M.farm * derived.efficiency * derived.skillPenalty * derived.farmMode.mods.feedsMult)}` },
       { name: "Lääkärit (~10 %) ja hoitajat", n: w("health"), note: "tavoite 1,8 % väestöstä" },
       { name: "Opettajat ja kasvattajat", n: w("edu"), note: "1 / 20 lasta" },
       { name: "Sepät, rakentajat, teollisuus", n: w("industry"), note: "työkalut & infra" },
@@ -577,7 +565,7 @@ function Yhteiskunta() {
       { name: "Virkamiehet, tuomarit, järjestyksenvalvojat", n: w("admin"), note: "tehokkuus: tavoite 1,5 % väestöstä" },
       { name: "Kauppiaat, hoivaajat, kuljettajat", n: w("services"), note: "hoiva: tavoite 3 % väestöstä" },
     ];
-  }, [s, alloc, era, M]);
+  }, [s, alloc, era, M, derived]);
 
   // ---- Allokaation säätö: lisäys otetaan suurimmasta sektorista, vähennys palautuu suurimpaan ----
   function setAlloc(key, val) {
@@ -790,7 +778,7 @@ function Yhteiskunta() {
       // näkyy jo efficiency-kertoimessa (nopeampi tuotanto), mutta hidastaa puhtaan tutkimuspisteen kertymää.
       const researchers = workers * norm.research;
       const researchGained = researchers * 0.15 * (0.5 + eduCov) * efficiency * C.research * G.researchMod * eduMode.mods.researchMult * (1 - 0.4 * appliedFrac) * (1 + 0.15 * industryFrac) + (ev.bonusResearch ?? 0);
-      research += researchGained;
+      research = Math.max(0, research + researchGained);
 
       // Aikakausisiirtymä
       const eraBeforeAdvance = eraIdx;
@@ -862,8 +850,7 @@ function Yhteiskunta() {
       } else if (researchGained > 0) {
         p.push(`Tutkijat kirjasivat ${fmt(researchGained)} yksikköä uutta tietoa${eraAdvanced ? ` — ja se riitti: ${ERAS[eraIdx].name.toLowerCase()} aikakausi koitti!` : "."}`);
       }
-      const voice = STORY_VOICE[eraBeforeAdvance] ?? STORY_VOICE[0];
-      const story = voice.tag + p.join(" ");
+      const story = p.join(" ");
 
       // ===== VUOSI VUODELTA: viiden vuoden päätapahtumat samaan kertomukseen =====
       // Yksi näistä (primaryOffset) on sama tapahtuma, joka oikeasti vaikutti tämän jakson laskelmiin (ev).
@@ -932,10 +919,10 @@ function Yhteiskunta() {
   const foodBalance = derived.foodProd - derived.foodNeed;
 
   const Stat = ({ label, value, sub, warn }) => (
-    <div style={{ padding: "6px 9px", background: "rgba(255,255,255,0.55)", border: "1px solid #d8c9a8", borderRadius: 6, minWidth: 0 }}>
-      <div style={{ fontSize: 9.5, textTransform: "uppercase", letterSpacing: 1, color: "#7a6a4a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{label}</div>
-      <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 15, fontWeight: 600, color: warn ? "#a02c2c" : "#2c2416", lineHeight: 1.2 }}>{value}</div>
-      {sub && <div style={{ fontSize: 9.5, color: warn ? "#a02c2c" : "#8a7a5a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{sub}</div>}
+    <div style={{ background: "#12233a", padding: "10px 14px", minWidth: 0 }}>
+      <div style={{ fontSize: 10.5, textTransform: "uppercase", letterSpacing: 1.5, color: "#93a3ba", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{label}</div>
+      <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 18, fontWeight: 600, color: warn ? "#c96a5a" : "#e9e2cf", lineHeight: 1.3 }}>{value}</div>
+      {sub && <div style={{ fontSize: 10.5, color: warn ? "#c96a5a" : "#93a3ba", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{sub}</div>}
     </div>
   );
 
@@ -945,15 +932,15 @@ function Yhteiskunta() {
   );
 
   const Section = ({ title, open, onToggle, children, right }) => (
-    <div className="paper">
-      <div className="section-head" onClick={onToggle}>
-        <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, margin: 0 }}>{title}</h2>
+    <div>
+      <div className="section-head" onClick={onToggle} style={{ borderBottom: "1px solid #c9a22755", paddingBottom: 6, marginBottom: 12 }}>
+        <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, fontWeight: 700, margin: 0, color: "#f0e8d2" }}>{title}</h2>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           {right}
           <span className="chevron" style={{ transform: open ? "rotate(90deg)" : "rotate(0deg)" }}>▶</span>
         </div>
       </div>
-      {open && <div style={{ marginTop: 10 }}>{children}</div>}
+      {open && <div>{children}</div>}
     </div>
   );
 
@@ -971,8 +958,9 @@ function Yhteiskunta() {
             title={m.desc}
             style={{
               font: "inherit", cursor: unlocked ? "pointer" : "not-allowed", fontSize: 11.5, padding: "5px 8px", borderRadius: 6,
-              border: active ? "1.5px solid #8a4b2a" : "1px solid #cdbb95",
-              background: active ? "rgba(138,75,42,0.14)" : "rgba(255,255,255,0.5)",
+              border: active ? "1.5px solid #c9a227" : "1px solid #2a3d57",
+              background: active ? "rgba(201,162,39,0.14)" : "#12233a",
+              color: "#cfd6de",
               opacity: unlocked ? 1 : 0.45,
             }}
           >
@@ -984,65 +972,70 @@ function Yhteiskunta() {
   );
 
   return (
-    <div style={{ minHeight: "100vh", background: "linear-gradient(160deg,#f2e8d0 0%,#e8dcc0 60%,#ddd0b0 100%)", fontFamily: "'Crimson Pro', Georgia, serif", color: "#2c2416", padding: 16 }}>
+    <div style={{ minHeight: "100vh", background: "linear-gradient(175deg,#101f33 0%,#0c1828 100%)", fontFamily: "'Source Sans 3', sans-serif", color: "#e9e2cf", padding: 16 }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Crimson+Pro:wght@400;600&family=IBM+Plex+Mono:wght@400;600&display=swap');
-        input[type=range]{accent-color:#8a4b2a;width:100%}
-        .btn{background:#2c2416;color:#f2e8d0;border:none;padding:14px 28px;font-family:'Playfair Display',serif;font-size:18px;font-weight:700;border-radius:4px;cursor:pointer;letter-spacing:0.5px;box-shadow:3px 3px 0 #8a4b2a;transition:transform .1s}
-        .btn:hover{transform:translate(-1px,-1px);box-shadow:4px 4px 0 #8a4b2a}
-        .btn:active{transform:translate(2px,2px);box-shadow:1px 1px 0 #8a4b2a}
-        .btn:disabled{opacity:.4;cursor:not-allowed}
-        .paper{background:rgba(252,246,232,0.8);border:1px solid #cdbb95;border-radius:8px;padding:16px;box-shadow:0 2px 8px rgba(60,45,20,0.12)}
-        .civcard{background:rgba(252,246,232,0.92);border:1px solid #cdbb95;border-radius:8px;padding:12px;cursor:pointer;transition:all .15s;text-align:left}
-        .civcard:hover{transform:translateY(-3px);box-shadow:0 6px 14px rgba(60,45,20,0.25);border-color:#8a4b2a}
-        .step{min-width:46px;height:44px;border:1.5px solid #8a4b2a;background:#fcf6e8;color:#5a3a1a;font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:600;border-radius:9px;cursor:pointer;touch-action:manipulation;user-select:none;-webkit-tap-highlight-color:transparent;padding:0}
-        .step:active:not(:disabled){background:#8a4b2a;color:#f2e8d0;transform:scale(0.95)}
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Source+Sans+3:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
+        input[type=range]{accent-color:#c9a227;width:100%}
+        .btn{background:linear-gradient(180deg,#d4af37,#b8922a);color:#14243a;border:none;padding:13px 28px;font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:700;border-radius:6px;cursor:pointer;letter-spacing:0.5px;transition:filter .15s,transform .1s}
+        .btn:hover{filter:brightness(1.06)}
+        .btn:active{transform:scale(0.98)}
+        .btn:disabled{opacity:.4;cursor:not-allowed;filter:none}
+        .paper{background:#12233a;border:1px solid #2a3d57;border-radius:8px;padding:16px}
+        .modal-panel{background:#0d1c30;border:1px solid #2a3d57;border-radius:12px;padding:18px 20px;animation:museoModalIn .2s ease-out}
+        @keyframes museoModalIn{from{opacity:0;transform:scale(0.98)}to{opacity:1;transform:scale(1)}}
+        .civcard{background:#12233a;border:1px solid #263a54;border-radius:8px;padding:12px;cursor:pointer;transition:border-color .15s;text-align:left;color:#e9e2cf}
+        .civcard:hover{border-color:#3a5273}
+        .step{min-width:46px;height:44px;border:1.5px solid #c9a22766;background:none;color:#c9a227;font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:600;border-radius:9px;cursor:pointer;touch-action:manipulation;user-select:none;-webkit-tap-highlight-color:transparent;padding:0}
+        .step:active:not(:disabled){background:#c9a227;color:#14243a;transform:scale(0.95)}
         .step:disabled{opacity:.25;cursor:not-allowed}
         .section-head{display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent}
-        .chevron{transition:transform .15s;font-size:13px;color:#8a4b2a}
-        .info-btn{border:none;background:none;color:#8a4b2a;font-size:13px;cursor:pointer;padding:2px 4px;vertical-align:middle}
-        .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
+        .chevron{transition:transform .15s;font-size:13px;color:#c9a227}
+        .info-btn{border:none;background:none;color:#c9a227;font-size:13px;cursor:pointer;padding:2px 4px;vertical-align:middle}
+        .grid2{display:grid;grid-template-columns:1.2fr 1fr;gap:20px;align-items:start}
         .grid-graphlog{display:grid;grid-template-columns:minmax(220px,1fr) 2fr;gap:14px;margin-top:10px}
+        .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:1px;background:#263a54;border:1px solid #263a54;border-radius:8px;overflow:hidden;margin-bottom:16px}
         @media (max-width:680px){
           .grid2{grid-template-columns:1fr}
           .grid-graphlog{grid-template-columns:1fr}
-          .score-badge{padding:5px 9px !important}
-          .score-badge .score-val{font-size:16px !important}
+          .stat-grid{grid-auto-flow:column;grid-auto-columns:minmax(118px,1fr);overflow-x:auto}
         }
         @media (max-width:400px){
           .btn{padding:12px 18px;font-size:16px}
         }
-        .rp-masthead{text-align:center;text-transform:uppercase;letter-spacing:4px;font-size:11px;font-weight:700;border-bottom:2px solid currentColor;border-top:2px solid currentColor;padding:4px 0;margin-bottom:10px}
-        .rp-news .rp-story{column-count:1;text-align:justify;font-size:14.5px;line-height:1.55}
-        @media (min-width:520px){ .rp-news .rp-story{column-count:2;column-gap:22px} }
-        .rp-news h2{text-transform:uppercase;letter-spacing:1px;border-bottom:3px double currentColor;padding-bottom:6px}
-        .rp-stat .rp-story{font-family:'IBM Plex Mono',monospace;font-size:13px;background:rgba(255,255,255,0.5);border:1px solid #cdd8d8;border-radius:4px;padding:10px;line-height:1.6}
-        .rp-stat h2{font-family:'IBM Plex Mono',monospace;letter-spacing:0.5px}
-        .rp-feed .rp-story{background:#fff;border-radius:14px;padding:12px 14px;font-size:14.5px;line-height:1.55;box-shadow:0 1px 4px rgba(30,60,100,0.12)}
-        .rp-feed h2{font-family:system-ui,sans-serif}
       `}</style>
 
-      {s.civ && (
-        <div className="score-badge" style={{ position: "fixed", top: 10, right: 10, zIndex: 15, background: "#2c2416", color: "#f2e8d0", borderRadius: 8, padding: "8px 14px", boxShadow: "3px 3px 0 #8a4b2a", textAlign: "center", lineHeight: 1.1 }}>
-          <div style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: 1, color: "#c9b98a" }}>Pisteet</div>
-          <div className="score-val" style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 20, fontWeight: 700 }}>{fmt(score.total)}</div>
-        </div>
-      )}
-
       <div style={{ maxWidth: 980, margin: "0 auto" }}>
-        <header style={{ textAlign: "center", marginBottom: 12, borderBottom: "3px double #8a7a5a", paddingBottom: 10 }}>
-          <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(22px,4vw,34px)", fontWeight: 900, margin: 0, letterSpacing: -0.5 }}>
-            {s.civ && s.villageName ? s.villageName.toUpperCase() : "YHTEISKUNTA"}
-          </h1>
-          <div style={{ fontStyle: "italic", color: "#7a6a4a", marginTop: 2, fontSize: 14 }}>
-            {s.civ ? <><b>{s.nation ? `${s.nation.icon} ${s.nation.name}` : `${s.civ.icon} ${s.civ.name}`}</b> — {s.nation ? s.nation.trait : s.civ.trait}{s.nation && <span style={{ color: "#9a8a6a" }}> (alkujaan {s.civ.icon} {s.civ.name})</span>}</> : "Society · 10 000 ihmistä. Ei tuontia. Ei vientiä. Kuinka pitkälle pääsette?"}
-          </div>
-        </header>
+        {s.civ ? (
+          <header style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 8, marginBottom: 16, paddingBottom: 14, borderBottom: "1px solid #263a54" }}>
+            <div>
+              <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(20px,3.2vw,30px)", fontWeight: 700, letterSpacing: 0.5, color: "#f0e8d2" }}>
+                {s.villageName && <>{s.villageName} <span style={{ color: "#c9a227" }}>·</span> </>}
+                {s.nation ? `${s.nation.icon} ${s.nation.name}` : `${s.civ.icon} ${s.civ.name}`}
+              </div>
+              <div style={{ fontSize: 13, color: "#93a3ba", letterSpacing: 2, textTransform: "uppercase", marginTop: 2 }}>
+                {era.name} aikakausi · Vuosi {s.year}
+              </div>
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "#93a3ba" }}>Sivilisaatioindeksi</div>
+              <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 30, fontWeight: 700, color: "#c9a227", lineHeight: 1 }}>{fmt(score.total)}</div>
+            </div>
+          </header>
+        ) : (
+          <header style={{ textAlign: "center", marginBottom: 16, borderBottom: "1px solid #263a54", paddingBottom: 14 }}>
+            <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(22px,4vw,34px)", fontWeight: 700, margin: 0, letterSpacing: 0.5, color: "#f0e8d2" }}>
+              YHTEISKUNTA
+            </h1>
+            <div style={{ color: "#93a3ba", marginTop: 4, fontSize: 14 }}>
+              Society · 10 000 ihmistä. Ei tuontia. Ei vientiä. Kuinka pitkälle pääsette?
+            </div>
+          </header>
+        )}
 
         {/* ===== SIVILISAATION VALINTA ===== */}
         {!s.civ && !pendingCiv && (
           <div>
-            <p style={{ textAlign: "center", fontSize: 16, fontStyle: "italic", color: "#5a4a2a", maxWidth: 640, margin: "0 auto 16px" }}>
+            <p style={{ textAlign: "center", fontSize: 16, color: "#93a3ba", maxWidth: 640, margin: "0 auto 16px" }}>
               Valitse sivilisaatiosi. Kullakin on historiaan perustuvat vahvuudet — ja heikkoudet.
             </p>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(215px,1fr))", gap: 10 }}>
@@ -1050,11 +1043,11 @@ function Yhteiskunta() {
                 const mods = Object.entries(c.mods);
                 return (
                   <button key={c.key} className="civcard" onClick={() => setPendingCiv(c)}>
-                    <div style={{ fontFamily: "'Playfair Display',serif", fontSize: 17, fontWeight: 700 }}>{c.icon} {c.name}</div>
-                    <div style={{ fontSize: 12, color: "#8a4b2a", fontWeight: 600, margin: "2px 0 4px" }}>{c.trait}</div>
-                    <div style={{ fontSize: 12, color: "#6a5a3a", marginBottom: 6, fontStyle: "italic" }}>{c.desc}</div>
+                    <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 17, fontWeight: 700, color: "#f0e8d2" }}>{c.icon} {c.name}</div>
+                    <div style={{ fontSize: 12, color: "#c9a227", fontWeight: 600, margin: "2px 0 4px" }}>{c.trait}</div>
+                    <div style={{ fontSize: 12, color: "#cfd6de", marginBottom: 6 }}>{c.desc}</div>
                     {mods.map(([k, v]) => (
-                      <div key={k} style={{ fontSize: 11, fontFamily: "'IBM Plex Mono',monospace", color: (k === "resilience" || k === "minPop" ? v < 1 : k === "health" ? v > 0 : v > 1) ? "#3a6a3a" : "#a02c2c" }}>
+                      <div key={k} style={{ fontSize: 11, fontFamily: "'IBM Plex Mono',monospace", color: (k === "resilience" || k === "minPop" ? v < 1 : k === "health" ? v > 0 : v > 1) ? "#7fbf8f" : "#c96a5a" }}>
                         {(k === "resilience" || k === "minPop" ? v < 1 : k === "health" ? v > 0 : v > 1) ? "▲" : "▼"} {MOD_LABELS[k](v)}
                       </div>
                     ))}
@@ -1062,7 +1055,7 @@ function Yhteiskunta() {
                 );
               })}
             </div>
-            <p style={{ textAlign: "center", fontSize: 12, color: "#8a7a5a", marginTop: 14, fontStyle: "italic" }}>
+            <p style={{ textAlign: "center", fontSize: 12, color: "#93a3ba", marginTop: 14 }}>
               20 sivilisaatiota Arnold Toynbeen klassisen luokittelun hengessä. Historioitsijat eivät ole yksimielisiä sivilisaatioiden määrästä: Spengler laski 8, Toynbee 21–28, Quigley 24.
             </p>
           </div>
@@ -1071,21 +1064,21 @@ function Yhteiskunta() {
         {/* ===== KYLÄN NIMEÄMINEN JA ALOITUSTAIDOT ===== */}
         {!s.civ && pendingCiv && (
           <div style={{ maxWidth: 640, margin: "0 auto" }}>
-            <button onClick={() => { setPendingCiv(null); setChosenSkills([]); }} style={{ background: "none", border: "none", color: "#8a4b2a", fontSize: 13, cursor: "pointer", padding: 0, marginBottom: 12 }}>◂ Vaihda sivilisaatio</button>
+            <button onClick={() => { setPendingCiv(null); setChosenSkills([]); }} style={{ background: "none", border: "none", color: "#c9a227", fontSize: 13, cursor: "pointer", padding: 0, marginBottom: 12 }}>◂ Vaihda sivilisaatio</button>
             <div className="paper" style={{ marginBottom: 14 }}>
-              <div style={{ fontFamily: "'Playfair Display',serif", fontSize: 18, fontWeight: 700, marginBottom: 10 }}>{pendingCiv.icon} {pendingCiv.name} — nimeä kylläsi</div>
+              <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 18, fontWeight: 700, marginBottom: 10, color: "#f0e8d2" }}>{pendingCiv.icon} {pendingCiv.name} — nimeä kylläsi</div>
               <input
                 value={villageNameInput}
                 onChange={(e) => setVillageNameInput(e.target.value.slice(0, 30))}
                 placeholder="Kylän nimi (valinnainen)"
-                style={{ width: "100%", padding: "10px 12px", fontSize: 15, fontFamily: "'Crimson Pro',serif", border: "1.5px solid #8a4b2a", borderRadius: 8, background: "#fcf6e8", boxSizing: "border-box" }}
+                style={{ width: "100%", padding: "10px 12px", fontSize: 15, fontFamily: "'Source Sans 3',sans-serif", color: "#e9e2cf", border: "1.5px solid #c9a22766", borderRadius: 8, background: "#0d1c30", boxSizing: "border-box" }}
               />
-              <p style={{ fontSize: 12, color: "#8a7a5a", margin: "6px 0 0", fontStyle: "italic" }}>Nimi näkyy tarinassa ja historianäkymässä — hyvä nimi tekee myöhemmästä esittelystä muille hauskemman.</p>
+              <p style={{ fontSize: 12, color: "#93a3ba", margin: "6px 0 0" }}>Nimi näkyy tarinassa ja historianäkymässä — hyvä nimi tekee myöhemmästä esittelystä muille hauskemman.</p>
             </div>
 
             <div className="paper">
-              <div style={{ fontFamily: "'Playfair Display',serif", fontSize: 18, fontWeight: 700, marginBottom: 4 }}>Valitse kaksi aloitustaitoa</div>
-              <p style={{ fontSize: 12.5, color: "#6a5a3a", margin: "0 0 10px" }}>Nämä ovat pieniä pysyviä bonuksia koko peliajaksi — valitse ne, jotka sopivat suunnittelemaasi strategiaan. ({chosenSkills.length}/2 valittu)</p>
+              <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 18, fontWeight: 700, marginBottom: 4, color: "#f0e8d2" }}>Valitse kaksi aloitustaitoa</div>
+              <p style={{ fontSize: 12.5, color: "#93a3ba", margin: "0 0 10px" }}>Nämä ovat pieniä pysyviä bonuksia koko peliajaksi — valitse ne, jotka sopivat suunnittelemaasi strategiaan. ({chosenSkills.length}/2 valittu)</p>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(230px,1fr))", gap: 8 }}>
                 {STARTING_SKILLS.map((sk) => {
                   const active = chosenSkills.includes(sk.key);
@@ -1096,10 +1089,10 @@ function Yhteiskunta() {
                       onClick={() => toggleSkill(sk.key)}
                       disabled={disabled}
                       className="civcard"
-                      style={{ borderColor: active ? "#8a4b2a" : "#cdbb95", background: active ? "rgba(138,75,42,0.14)" : "rgba(252,246,232,0.92)", opacity: disabled ? 0.45 : 1, cursor: disabled ? "not-allowed" : "pointer" }}
+                      style={{ borderColor: active ? "#c9a227" : "#263a54", background: active ? "rgba(201,162,39,0.14)" : "#12233a", opacity: disabled ? 0.45 : 1, cursor: disabled ? "not-allowed" : "pointer" }}
                     >
-                      <div style={{ fontFamily: "'Playfair Display',serif", fontSize: 15, fontWeight: 700 }}>{sk.icon} {sk.name}{active && " ✓"}</div>
-                      <div style={{ fontSize: 11.5, color: "#6a5a3a", marginTop: 2 }}>{sk.desc}</div>
+                      <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 15, fontWeight: 700, color: "#f0e8d2" }}>{sk.icon} {sk.name}{active && " ✓"}</div>
+                      <div style={{ fontSize: 11.5, color: "#cfd6de", marginTop: 2 }}>{sk.desc}</div>
                     </button>
                   );
                 })}
@@ -1115,35 +1108,35 @@ function Yhteiskunta() {
         {/* ===== ITSE PELI ===== */}
         {s.civ && (
           <>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(100px,1fr))", gap: 6, marginBottom: 10 }}>
-              <Stat label="Vuosi" value={s.year} sub={era.name} />
-              <Stat label="Väestö" value={fmt(pop)} sub={`👶${fmt(s.children)} 💪${fmt(s.workers)} 👴${fmt(s.elderly)}`} warn={pop < 2000} />
-              <Stat label="Ruokatase" value={(foodBalance >= 0 ? "+" : "") + fmt(foodBalance)} sub={`Varasto ${fmt(s.foodStore)}`} warn={foodBalance < 0 && s.foodStore < pop * 0.5} />
+            <div className="stat-grid">
+              <Stat label="Väkiluku" value={fmt(pop)} sub={`👶${fmt(s.children)} 💪${fmt(s.workers)} 👴${fmt(s.elderly)}`} warn={pop < 2000} />
+              <Stat label="Ruokavarasto" value={fmt(s.foodStore)} sub={`Tase ${foodBalance >= 0 ? "+" : ""}${fmt(foodBalance)}`} warn={foodBalance < 0 && s.foodStore < pop * 0.5} />
+              <Stat label="Tutkimus" value={nextEra ? `${fmt(s.research)}/${fmt(nextEra.research)}` : fmt(s.research)} sub={nextEra ? `→ ${nextEra.name}` : "Huippu saavutettu"} />
+              <Stat label="Elinajanodote" value={Math.round(derived.lifeExpectancy) + " v"} />
               <Stat label="Terveys" value={Math.round(derived.healthCov * 100) + " %"} sub={`Koul. ${Math.round(derived.eduCov * 100)} % · Hoiva ${Math.round(derived.careCov * 100)} %`} warn={derived.healthCov < 0.7} />
               <Stat label="Yhteisö" value={Math.round(derived.cohesion * 100) + " %"} sub={`Moraali ${Math.round(derived.morale * 100)} %`} warn={derived.cohesion < 0.5 || derived.adminCov < 0.6} />
-              <Stat label="Tutkimus" value={fmt(s.research)} sub={nextEra ? `→ ${nextEra.name}: ${fmt(nextEra.research)} p` : "Huippu saavutettu"} />
             </div>
 
-            <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
-              <button onClick={() => setPyramidOpen(true)} className="paper" style={{ cursor: "pointer", font: "inherit", padding: "6px 12px", fontSize: 13, border: "1px solid #cdbb95" }}>
+            <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+              <button onClick={() => setPyramidOpen(true)} className="paper" style={{ cursor: "pointer", font: "inherit", padding: "6px 12px", fontSize: 13, color: "#cfd6de" }}>
                 👪 Keski-ikä {Math.round(derived.avgAge)} v · Väestön jakauma ▸
               </button>
-              <button onClick={() => setGovOpen(true)} className="paper" style={{ cursor: "pointer", font: "inherit", padding: "6px 12px", fontSize: 13, border: "1px solid #cdbb95" }}>
+              <button onClick={() => setGovOpen(true)} className="paper" style={{ cursor: "pointer", font: "inherit", padding: "6px 12px", fontSize: 13, color: "#cfd6de" }}>
                 {govByKey(s.gov).icon} {govByKey(s.gov).name} · Hallintomuoto ▸
               </button>
-              <button onClick={() => setMetricsOpen(true)} className="paper" style={{ cursor: "pointer", font: "inherit", padding: "6px 12px", fontSize: 13, border: "1px solid #cdbb95" }}>
+              <button onClick={() => setMetricsOpen(true)} className="paper" style={{ cursor: "pointer", font: "inherit", padding: "6px 12px", fontSize: 13, color: "#cfd6de" }}>
                 📈 Yhteiskuntamittarit ▸
               </button>
-              <button onClick={() => setHistoryOpen(true)} className="paper" style={{ cursor: "pointer", font: "inherit", padding: "6px 12px", fontSize: 13, border: "1px solid #8a4b2a", background: "rgba(138,75,42,0.08)", fontWeight: 600 }}>
+              <button onClick={() => setHistoryOpen(true)} className="paper" style={{ cursor: "pointer", font: "inherit", padding: "6px 12px", fontSize: 13, border: "1px solid #c9a227", background: "rgba(201,162,39,0.1)", fontWeight: 600, color: "#f0e8d2" }}>
                 📖 Historia ja esittely ▸
               </button>
               {s.nation ? (
-                <div className="paper" style={{ padding: "6px 12px", fontSize: 13, border: "1px solid #cdbb95", background: "rgba(138,75,42,0.1)" }}>
-                  {s.nation.icon} {s.nation.name} <span style={{ color: "#8a7a5a" }}>· kansallisvaltio</span>
+                <div className="paper" style={{ padding: "6px 12px", fontSize: 13, background: "rgba(201,162,39,0.1)", color: "#cfd6de" }}>
+                  {s.nation.icon} {s.nation.name} <span style={{ color: "#93a3ba" }}>· kansallisvaltio</span>
                 </div>
               ) : (
                 s.era >= 2 && NATION_BRANCHES[s.civ.key] && (
-                  <button onClick={() => setNationOpen(true)} className="paper" style={{ cursor: "pointer", font: "inherit", padding: "6px 12px", fontSize: 13, border: "1px solid #b08a5a", background: "rgba(138,75,42,0.06)" }}>
+                  <button onClick={() => setNationOpen(true)} className="paper" style={{ cursor: "pointer", font: "inherit", padding: "6px 12px", fontSize: 13, border: "1px solid #c9a22766", background: "rgba(201,162,39,0.06)", color: "#cfd6de" }}>
                     🏳️ Muodosta kansallisvaltio ▸
                   </button>
                 )
@@ -1151,55 +1144,55 @@ function Yhteiskunta() {
             </div>
 
             {nationOpen && (
-              <div style={{ position: "fixed", inset: 0, background: "rgba(30,22,10,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 20, padding: 12 }} onClick={() => setNationOpen(false)}>
-                <div className="paper" style={{ maxWidth: 620, width: "100%", maxHeight: "88vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+              <div style={{ position: "fixed", inset: 0, background: "rgba(6,12,22,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 20, padding: 12 }} onClick={() => setNationOpen(false)}>
+                <div className="modal-panel" style={{ maxWidth: 620, width: "100%", maxHeight: "88vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                    <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, margin: "0 0 6px" }}>🏳️ Muodosta kansallisvaltio</h2>
-                    <button onClick={() => setNationOpen(false)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#7a6a4a", lineHeight: 1 }}>✕</button>
+                    <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, margin: "0 0 6px", color: "#f0e8d2" }}>🏳️ Muodosta kansallisvaltio</h2>
+                    <button onClick={() => setNationOpen(false)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#93a3ba", lineHeight: 1 }}>✕</button>
                   </div>
-                  <p style={{ fontSize: 13, color: "#6a5a3a", margin: "0 0 12px" }}>{s.civ.icon} {s.civ.name} voi jatkaa yhtenä historiallisista kansallisvaltioistaan. Kukin tuo oman tapahtumakirjonsa perussimulaation päälle. Peruspeli pysyy täysin pelattavana ilman näitä — tämä on valinnainen syvennys.</p>
+                  <p style={{ fontSize: 13, color: "#93a3ba", margin: "0 0 12px" }}>{s.civ.icon} {s.civ.name} voi jatkaa yhtenä historiallisista kansallisvaltioistaan. Kukin tuo oman tapahtumakirjonsa perussimulaation päälle. Peruspeli pysyy täysin pelattavana ilman näitä — tämä on valinnainen syvennys.</p>
                   {NATION_BRANCHES[s.civ.key].map((n) => {
                     const owned = ownedNations.includes(n.key);
                     return (
                       <div key={n.key} className="civcard" style={{ width: "100%", marginBottom: 8, display: "block" }}>
-                        <div style={{ fontFamily: "'Playfair Display',serif", fontSize: 16, fontWeight: 700 }}>{n.icon} {n.name}</div>
-                        <div style={{ fontSize: 11.5, color: "#8a4b2a", fontWeight: 600, margin: "2px 0 4px" }}>{n.trait}</div>
-                        <div style={{ fontSize: 11.5, color: "#6a5a3a", marginBottom: 6 }}>{n.events.length} omaa historiallista tapahtumaa: {n.events.map((e) => e.name).join(" · ")}</div>
+                        <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 16, fontWeight: 700, color: "#f0e8d2" }}>{n.icon} {n.name}</div>
+                        <div style={{ fontSize: 11.5, color: "#c9a227", fontWeight: 600, margin: "2px 0 4px" }}>{n.trait}</div>
+                        <div style={{ fontSize: 11.5, color: "#cfd6de", marginBottom: 6 }}>{n.events.length} omaa historiallista tapahtumaa: {n.events.map((e) => e.name).join(" · ")}</div>
                         {owned ? (
-                          <button className="btn" style={{ padding: "8px 16px", fontSize: 13, boxShadow: "2px 2px 0 #8a4b2a" }} onClick={() => becomeNation(n)}>Jatka {n.name}na ▸</button>
+                          <button className="btn" style={{ padding: "8px 16px", fontSize: 13 }} onClick={() => becomeNation(n)}>Jatka {n.name}na ▸</button>
                         ) : (
-                          <button className="btn" style={{ padding: "8px 16px", fontSize: 13, boxShadow: "2px 2px 0 #8a4b2a" }} disabled={buyingNation === n.key} onClick={() => buyNation(n)}>
+                          <button className="btn" style={{ padding: "8px 16px", fontSize: 13 }} disabled={buyingNation === n.key} onClick={() => buyNation(n)}>
                             {buyingNation === n.key ? "Käsitellään…" : `Osta ${n.price} (demo) 🔓`}
                           </button>
                         )}
                       </div>
                     );
                   })}
-                  <div style={{ fontSize: 10.5, color: "#9a8a6a", fontStyle: "italic", marginTop: 6 }}>Demo-osto: tallentuu vain tähän selaimeen, ei oikeaa veloitusta. Oikeassa julkaisussa tämä kytkettäisiin sovelluskaupan maksuun.</div>
+                  <div style={{ fontSize: 10.5, color: "#93a3ba", marginTop: 6 }}>Demo-osto: tallentuu vain tähän selaimeen, ei oikeaa veloitusta. Oikeassa julkaisussa tämä kytkettäisiin sovelluskaupan maksuun.</div>
                 </div>
               </div>
             )}
 
             {metricsOpen && (
-              <div style={{ position: "fixed", inset: 0, background: "rgba(30,22,10,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 20, padding: 12 }} onClick={() => setMetricsOpen(false)}>
-                <div className="paper" style={{ maxWidth: 560, width: "100%", maxHeight: "88vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+              <div style={{ position: "fixed", inset: 0, background: "rgba(6,12,22,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 20, padding: 12 }} onClick={() => setMetricsOpen(false)}>
+                <div className="modal-panel" style={{ maxWidth: 560, width: "100%", maxHeight: "88vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                    <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, margin: "0 0 6px" }}>📈 Yhteiskuntamittarit</h2>
-                    <button onClick={() => setMetricsOpen(false)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#7a6a4a", lineHeight: 1 }}>✕</button>
+                    <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, margin: "0 0 6px", color: "#f0e8d2" }}>📈 Yhteiskuntamittarit</h2>
+                    <button onClick={() => setMetricsOpen(false)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#93a3ba", lineHeight: 1 }}>✕</button>
                   </div>
-                  <p style={{ fontSize: 13, color: "#6a5a3a", margin: "0 0 12px" }}>Mittarit mukailevat oikeita yhteiskuntatieteen tunnuslukuja ja avautuvat sitä mukaa kun vastaava mittausmenetelmä syntyi historiassa. Kunkin ℹ️ kertoo, miten oikea mittari lasketaan.</p>
+                  <p style={{ fontSize: 13, color: "#93a3ba", margin: "0 0 12px" }}>Mittarit mukailevat oikeita yhteiskuntatieteen tunnuslukuja ja avautuvat sitä mukaa kun vastaava mittausmenetelmä syntyi historiassa. Kunkin ℹ️ kertoo, miten oikea mittari lasketaan.</p>
                   {METRICS.map((m) => {
                     const unlocked = s.era >= m.unlockEra;
                     const val = unlocked ? derived[m.key] : null;
                     return (
-                      <div key={m.key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 4px", borderBottom: "1px dotted #e0d4b4" }}>
+                      <div key={m.key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 4px", borderBottom: "1px dotted #263a54" }}>
                         <div>
-                          <span style={{ fontSize: 14 }}>{m.icon} {m.name}</span>
+                          <span style={{ fontSize: 14, color: "#cfd6de" }}>{m.icon} {m.name}</span>
                           {unlocked && <InfoButton title={m.infoTitle} text={m.infoText} />}
-                          {!unlocked && <div style={{ fontSize: 10.5, color: "#9a8a6a", fontStyle: "italic" }}>🔒 Avautuu aikakaudella: {ERAS[m.unlockEra].name}</div>}
+                          {!unlocked && <div style={{ fontSize: 10.5, color: "#93a3ba" }}>🔒 Avautuu aikakaudella: {ERAS[m.unlockEra].name}</div>}
                         </div>
                         {unlocked && (
-                          <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontWeight: 600, fontSize: 15 }}>
+                          <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontWeight: 600, fontSize: 15, color: "#e9e2cf" }}>
                             {m.decimals ? val.toFixed(m.decimals) : Math.round(val)}{m.unit}
                           </span>
                         )}
@@ -1226,56 +1219,74 @@ function Yhteiskunta() {
                 studentNotes ? `OMAT HUOMIONI:\n${studentNotes}` : "",
               ].filter(Boolean).join("\n");
 
-              const copySummary = () => {
+              const showCopied = () => {
+                setCopyDone(true);
+                setTimeout(() => setCopyDone(false), 2000);
+              };
+              const fallbackCopy = () => {
                 try {
-                  navigator.clipboard.writeText(summaryText);
-                  setCopyDone(true);
-                  setTimeout(() => setCopyDone(false), 2000);
+                  const ta = document.createElement("textarea");
+                  ta.value = summaryText;
+                  ta.style.position = "fixed";
+                  ta.style.opacity = "0";
+                  document.body.appendChild(ta);
+                  ta.focus();
+                  ta.select();
+                  const ok = document.execCommand("copy");
+                  document.body.removeChild(ta);
+                  if (ok) showCopied();
                 } catch (e) {}
+              };
+              const copySummary = () => {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                  navigator.clipboard.writeText(summaryText).then(showCopied).catch(fallbackCopy);
+                } else {
+                  fallbackCopy();
+                }
               };
 
               return (
-              <div style={{ position: "fixed", inset: 0, background: "rgba(30,22,10,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 20, padding: 12 }} onClick={() => setHistoryOpen(false)}>
-                <div className="paper" style={{ maxWidth: 640, width: "100%", maxHeight: "90vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+              <div style={{ position: "fixed", inset: 0, background: "rgba(6,12,22,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 20, padding: 12 }} onClick={() => setHistoryOpen(false)}>
+                <div className="modal-panel" style={{ maxWidth: 640, width: "100%", maxHeight: "90vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                    <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, margin: "0 0 6px" }}>📖 {s.villageName ? `${s.villageName}n historia` : "Yhteisöni historia"}</h2>
-                    <button onClick={() => setHistoryOpen(false)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#7a6a4a", lineHeight: 1 }}>✕</button>
+                    <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, margin: "0 0 6px", color: "#f0e8d2" }}>📖 {s.villageName ? `${s.villageName}n historia` : "Yhteisöni historia"}</h2>
+                    <button onClick={() => setHistoryOpen(false)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#93a3ba", lineHeight: 1 }}>✕</button>
                   </div>
-                  <p style={{ fontSize: 12.5, color: "#6a5a3a", margin: "0 0 12px" }}>Tämä näkymä kokoaa yhteisösi koko tarinan — hyvä pohja esitellä muille, mitä valintoja teit ja miksi.</p>
+                  <p style={{ fontSize: 12.5, color: "#93a3ba", margin: "0 0 12px" }}>Tämä näkymä kokoaa yhteisösi koko tarinan — hyvä pohja esitellä muille, mitä valintoja teit ja miksi.</p>
 
-                  <div style={{ background: "rgba(138,75,42,0.06)", border: "1px solid #d8c9a8", borderRadius: 8, padding: "10px 12px", marginBottom: 12 }}>
-                    <div style={{ fontFamily: "'Playfair Display',serif", fontSize: 16, fontWeight: 700 }}>{s.civ.icon} {s.civ.name}{s.nation && <> → {s.nation.icon} {s.nation.name}</>}</div>
+                  <div style={{ background: "#12233a", border: "1px solid #2a3d57", borderRadius: 8, padding: "10px 12px", marginBottom: 12 }}>
+                    <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 16, fontWeight: 700, color: "#f0e8d2" }}>{s.civ.icon} {s.civ.name}{s.nation && <> → {s.nation.icon} {s.nation.name}</>}</div>
                     {s.startSkills.length > 0 && (
-                      <div style={{ fontSize: 12.5, color: "#6a5a3a", marginTop: 4 }}>
+                      <div style={{ fontSize: 12.5, color: "#cfd6de", marginTop: 4 }}>
                         Aloitustaidot: {s.startSkills.map((k) => `${startingSkillByKey(k)?.icon} ${startingSkillByKey(k)?.name}`).join(" · ")}
                       </div>
                     )}
-                    <div style={{ fontSize: 12.5, color: "#6a5a3a", marginTop: 4 }}>Nyt: vuosi {s.year} · {era.name} · {fmt(pop)} asukasta · {govByKey(s.gov).icon} {govByKey(s.gov).name}</div>
+                    <div style={{ fontSize: 12.5, color: "#cfd6de", marginTop: 4 }}>Nyt: vuosi {s.year} · {era.name} · {fmt(pop)} asukasta · {govByKey(s.gov).icon} {govByKey(s.gov).name}</div>
                   </div>
 
-                  <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 1.2, color: "#7a6a4a", marginBottom: 6 }}>Aikajana — keskeiset käännekohdat</div>
+                  <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 1.2, color: "#93a3ba", marginBottom: 6 }}>Aikajana — keskeiset käännekohdat</div>
                   <div style={{ maxHeight: 200, overflowY: "auto", marginBottom: 14 }}>
                     {s.milestones.map((m, i) => (
-                      <div key={i} style={{ padding: "5px 8px", fontSize: 13, borderLeft: "3px solid #8a4b2a", marginBottom: 3, background: "rgba(255,255,255,0.4)" }}>
-                        <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 11.5, color: "#8a7a5a", marginRight: 8 }}>v.{m.year}</span>{m.text}
+                      <div key={i} style={{ padding: "5px 8px", fontSize: 13, borderLeft: "3px solid #c9a227", marginBottom: 3, background: "rgba(255,255,255,0.03)", color: "#cfd6de" }}>
+                        <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 11.5, color: "#93a3ba", marginRight: 8 }}>v.{m.year}</span>{m.text}
                       </div>
                     ))}
                   </div>
 
-                  <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 1.2, color: "#7a6a4a", marginBottom: 6 }}>Sivilisaatioindeksi nyt: {fmt(score.total)}</div>
+                  <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 1.2, color: "#93a3ba", marginBottom: 6 }}>Sivilisaatioindeksi nyt: {fmt(score.total)}</div>
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, marginBottom: 14 }}>
                     <tbody>
                       {Object.entries(score.parts).map(([k, v]) => (
-                        <tr key={k} style={{ borderBottom: "1px dotted #e0d4b4" }}>
-                          <td style={{ padding: "3px 4px" }}>{k}</td>
-                          <td style={{ textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", fontWeight: 600 }}>{fmt(v)}</td>
+                        <tr key={k} style={{ borderBottom: "1px dotted #263a54" }}>
+                          <td style={{ padding: "3px 4px", color: "#cfd6de" }}>{k}</td>
+                          <td style={{ textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", fontWeight: 600, color: "#e9e2cf" }}>{fmt(v)}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
 
-                  <div style={{ background: "rgba(138,75,42,0.08)", border: "1px dashed #b08a5a", borderRadius: 6, padding: "10px 12px", marginBottom: 14, fontSize: 13 }}>
-                    <b>💡 Pohdittavaksi esittelyä varten:</b>
+                  <div style={{ background: "rgba(201,162,39,0.08)", border: "1px dashed #c9a22766", borderRadius: 6, padding: "10px 12px", marginBottom: 14, fontSize: 13, color: "#cfd6de" }}>
+                    <b style={{ color: "#f0e8d2" }}>💡 Pohdittavaksi esittelyä varten:</b>
                     <ul style={{ margin: "6px 0 0", paddingLeft: 18 }}>
                       <li>Mikä valinta (hallintomuoto, erikoistuminen, tuotantosuunta) vaikutti eniten yhteiskuntasi kehitykseen?</li>
                       <li>Mikä historiallinen tapahtuma yllätti sinut eniten? Miten reagoit siihen?</li>
@@ -1284,13 +1295,13 @@ function Yhteiskunta() {
                     </ul>
                   </div>
 
-                  <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 1.2, color: "#7a6a4a", marginBottom: 6 }}>Omat huomiosi (näkyy vain sinulle, tällä laitteella)</div>
+                  <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 1.2, color: "#93a3ba", marginBottom: 6 }}>Omat huomiosi (näkyy vain sinulle, tällä laitteella)</div>
                   <textarea
                     value={studentNotes}
                     onChange={(e) => setStudentNotes(e.target.value.slice(0, 2000))}
                     placeholder="Kirjoita tähän ajatuksiasi esittelyä varten..."
                     rows={4}
-                    style={{ width: "100%", padding: "8px 10px", fontSize: 13.5, fontFamily: "'Crimson Pro',serif", border: "1.5px solid #cdbb95", borderRadius: 8, background: "#fcf6e8", boxSizing: "border-box", marginBottom: 12 }}
+                    style={{ width: "100%", padding: "8px 10px", fontSize: 13.5, fontFamily: "'Source Sans 3',sans-serif", color: "#e9e2cf", border: "1.5px solid #263a54", borderRadius: 8, background: "#0d1c30", boxSizing: "border-box", marginBottom: 12 }}
                   />
 
                   <div style={{ textAlign: "center", display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
@@ -1302,30 +1313,30 @@ function Yhteiskunta() {
               ); })()}
 
             {pyramidOpen && (
-              <div style={{ position: "fixed", inset: 0, background: "rgba(30,22,10,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 20, padding: 12 }} onClick={() => setPyramidOpen(false)}>
-                <div className="paper" style={{ maxWidth: 560, width: "100%", maxHeight: "88vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+              <div style={{ position: "fixed", inset: 0, background: "rgba(6,12,22,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 20, padding: 12 }} onClick={() => setPyramidOpen(false)}>
+                <div className="modal-panel" style={{ maxWidth: 560, width: "100%", maxHeight: "88vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                    <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, margin: "0 0 10px" }}>👪 Väestön jakauma</h2>
-                    <button onClick={() => setPyramidOpen(false)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#7a6a4a", lineHeight: 1 }}>✕</button>
+                    <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, margin: "0 0 10px", color: "#f0e8d2" }}>👪 Väestön jakauma</h2>
+                    <button onClick={() => setPyramidOpen(false)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#93a3ba", lineHeight: 1 }}>✕</button>
                   </div>
                   <div style={{ display: "flex", gap: 16, marginBottom: 14, flexWrap: "wrap" }}>
-                    <div><div style={{ fontSize: 11, color: "#7a6a4a", textTransform: "uppercase" }}>Keski-ikä</div><div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 22, fontWeight: 700 }}>{Math.round(derived.avgAge)} v</div></div>
-                    <div><div style={{ fontSize: 11, color: "#7a6a4a", textTransform: "uppercase" }}>Huoltosuhde</div><div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 22, fontWeight: 700 }}>{Math.round(derived.depRatio)}</div><div style={{ fontSize: 10.5, color: "#8a7a5a" }}>lasta+vanhusta / 100 työikäistä</div></div>
+                    <div><div style={{ fontSize: 11, color: "#93a3ba", textTransform: "uppercase" }}>Keski-ikä</div><div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 22, fontWeight: 700, color: "#e9e2cf" }}>{Math.round(derived.avgAge)} v</div></div>
+                    <div><div style={{ fontSize: 11, color: "#93a3ba", textTransform: "uppercase" }}>Huoltosuhde</div><div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 22, fontWeight: 700, color: "#e9e2cf" }}>{Math.round(derived.depRatio)}</div><div style={{ fontSize: 10.5, color: "#93a3ba" }}>lasta+vanhusta / 100 työikäistä</div></div>
                   </div>
                   {[
-                    { label: "👶 Lapset", n: s.children, color: "#8a4b2a", role: era.roles.children },
-                    { label: "💪 Työikäiset", n: s.workers, color: "#5c4a7a", role: era.roles.youth },
-                    { label: "👴 Vanhukset", n: s.elderly, color: "#2a6a5c", role: era.roles.elderly },
+                    { label: "👶 Lapset", n: s.children, color: "#c9a227", role: era.roles.children },
+                    { label: "💪 Työikäiset", n: s.workers, color: "#7fbf8f", role: era.roles.youth },
+                    { label: "👴 Vanhukset", n: s.elderly, color: "#93a3ba", role: era.roles.elderly },
                   ].map((g) => (
                     <div key={g.label} style={{ marginBottom: 12 }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, marginBottom: 4 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, marginBottom: 4, color: "#cfd6de" }}>
                         <span>{g.label}</span>
-                        <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontWeight: 600 }}>{fmt(g.n)} · {Math.round((g.n / pop) * 100)} %</span>
+                        <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontWeight: 600, color: "#e9e2cf" }}>{fmt(g.n)} · {Math.round((g.n / pop) * 100)} %</span>
                       </div>
-                      <div style={{ height: 14, background: "#e6d9b8", borderRadius: 7, overflow: "hidden", border: "1px solid #cdbb95", marginBottom: 5 }}>
+                      <div style={{ height: 8, background: "#1c3049", borderRadius: 4, overflow: "hidden", marginBottom: 5 }}>
                         <div style={{ width: `${(g.n / pop) * 100}%`, height: "100%", background: g.color }} />
                       </div>
-                      <div style={{ fontSize: 12, color: "#6a5a3a", fontStyle: "italic" }}>{era.name}: {g.role}</div>
+                      <div style={{ fontSize: 12, color: "#93a3ba" }}>{era.name}: {g.role}</div>
                     </div>
                   ))}
                   <div style={{ textAlign: "center", marginTop: 6 }}>
@@ -1336,13 +1347,13 @@ function Yhteiskunta() {
             )}
 
             {govOpen && (
-              <div style={{ position: "fixed", inset: 0, background: "rgba(30,22,10,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 20, padding: 12 }} onClick={() => setGovOpen(false)}>
-                <div className="paper" style={{ maxWidth: 620, width: "100%", maxHeight: "88vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+              <div style={{ position: "fixed", inset: 0, background: "rgba(6,12,22,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 20, padding: 12 }} onClick={() => setGovOpen(false)}>
+                <div className="modal-panel" style={{ maxWidth: 620, width: "100%", maxHeight: "88vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                    <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, margin: "0 0 10px" }}>🏛️ Hallintomuoto</h2>
-                    <button onClick={() => setGovOpen(false)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#7a6a4a", lineHeight: 1 }}>✕</button>
+                    <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, margin: "0 0 10px", color: "#f0e8d2" }}>🏛️ Hallintomuoto</h2>
+                    <button onClick={() => setGovOpen(false)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#93a3ba", lineHeight: 1 }}>✕</button>
                   </div>
-                  <p style={{ fontSize: 13, color: "#6a5a3a", margin: "0 0 12px" }}>Itsevaltaisilta hallinnoilta puuttuu legitimiteetti — ne tuottavat tehokkaasti mutta kaatuvat herkästi, jos kansa on tyytymätön. Demokratia ja tasavalta ovat hitaampia mutta vakaampia. Teokratia on oma haaransa: vahva yhteisöllisyys, hitaampi tiede.</p>
+                  <p style={{ fontSize: 13, color: "#93a3ba", margin: "0 0 12px" }}>Itsevaltaisilta hallinnoilta puuttuu legitimiteetti — ne tuottavat tehokkaasti mutta kaatuvat herkästi, jos kansa on tyytymätön. Demokratia ja tasavalta ovat hitaampia mutta vakaampia. Teokratia on oma haaransa: vahva yhteisöllisyys, hitaampi tiede.</p>
                   {GOVERNMENTS.map((g) => {
                     const unlocked = govUnlocked(g, s.era, derived);
                     const active = s.gov === g.key;
@@ -1352,15 +1363,15 @@ function Yhteiskunta() {
                         disabled={!unlocked}
                         onClick={() => { changeGov(g.key); setGovOpen(false); }}
                         className="civcard"
-                        style={{ width: "100%", marginBottom: 8, opacity: unlocked ? 1 : 0.45, cursor: unlocked ? "pointer" : "not-allowed", borderColor: active ? "#8a4b2a" : "#cdbb95", background: active ? "rgba(138,75,42,0.1)" : "rgba(252,246,232,0.92)" }}
+                        style={{ width: "100%", marginBottom: 8, opacity: unlocked ? 1 : 0.45, cursor: unlocked ? "pointer" : "not-allowed", borderColor: active ? "#c9a227" : "#263a54", background: active ? "rgba(201,162,39,0.1)" : "#12233a" }}
                       >
-                        <div style={{ fontFamily: "'Playfair Display',serif", fontSize: 16, fontWeight: 700 }}>{g.icon} {g.name} {active && "· nykyinen"}</div>
-                        <div style={{ fontSize: 11.5, color: "#8a4b2a", fontWeight: 600, margin: "2px 0 4px" }}>{g.axis}</div>
-                        <div style={{ fontSize: 12, color: "#6a5a3a", marginBottom: 4, fontStyle: "italic" }}>{g.desc}</div>
-                        <div style={{ fontSize: 11, fontFamily: "'IBM Plex Mono',monospace", color: "#6a5a3a" }}>
+                        <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 16, fontWeight: 700, color: "#f0e8d2" }}>{g.icon} {g.name} {active && "· nykyinen"}</div>
+                        <div style={{ fontSize: 11.5, color: "#c9a227", fontWeight: 600, margin: "2px 0 4px" }}>{g.axis}</div>
+                        <div style={{ fontSize: 12, color: "#cfd6de", marginBottom: 4 }}>{g.desc}</div>
+                        <div style={{ fontSize: 11, fontFamily: "'IBM Plex Mono',monospace", color: "#93a3ba" }}>
                           Tutkimus ×{g.researchMod} · Yhteisöllisyys ×{g.cohesionMod} · Hallintoteho ×{g.adminEff} · Levottomuusriski {Math.round(g.unrest * 100)} %
                         </div>
-                        {!unlocked && <div style={{ fontSize: 11, color: "#a02c2c", marginTop: 4 }}>🔒 {govRequirementText(g)}</div>}
+                        {!unlocked && <div style={{ fontSize: 11, color: "#c96a5a", marginTop: 4 }}>🔒 {govRequirementText(g)}</div>}
                       </button>
                     );
                   })}
@@ -1369,62 +1380,63 @@ function Yhteiskunta() {
             )}
 
             {derived.skillPenalty < 1 && (
-              <div style={{ background: "#f4d9c0", border: "1px solid #c08a5a", borderRadius: 6, padding: "8px 14px", marginBottom: 12, fontSize: 14 }}>
-                ⚠️ <b>Osaamispula:</b> {era.name} aikakausi vaatisi vähintään {fmt(eraMinPop)} ihmistä täyteen erikoistumiseen. Tuottavuus nyt {Math.round(derived.skillPenalty * 100)} %.
+              <div style={{ background: "rgba(201,162,39,0.1)", border: "1px solid #c9a22766", borderRadius: 6, padding: "8px 14px", marginBottom: 12, fontSize: 14, color: "#cfd6de" }}>
+                ⚠️ <b style={{ color: "#f0e8d2" }}>Osaamispula:</b> {era.name} aikakausi vaatisi vähintään {fmt(eraMinPop)} ihmistä täyteen erikoistumiseen. Tuottavuus nyt {Math.round(derived.skillPenalty * 100)} %.
               </div>
             )}
 
             {s.report && (
               <button
                 onClick={() => setReportOpen(true)}
-                style={{ display: "block", width: "100%", textAlign: "left", cursor: "pointer", marginBottom: 10, borderLeft: `5px solid ${era.color}`, background: "rgba(252,246,232,0.8)", border: "1px solid #cdbb95", borderRadius: 8, padding: "8px 12px", font: "inherit" }}
+                className="paper"
+                style={{ display: "block", width: "100%", textAlign: "left", cursor: "pointer", marginBottom: 10, borderLeft: "3px solid #c9a227", padding: "8px 12px", font: "inherit" }}
               >
-                <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 14, fontWeight: 700 }}>📜 Kertomus vuosilta {s.report.period}</span>
-                <span style={{ fontSize: 12, color: "#7a6a4a", marginLeft: 8 }}>— {s.report.eventName} · lue tarina ▸</span>
+                <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 14, fontWeight: 700, color: "#f0e8d2" }}>📜 Kertomus vuosilta {s.report.period}</span>
+                <span style={{ fontSize: 12, color: "#93a3ba", marginLeft: 8 }}>— {s.report.eventName} · lue tarina ▸</span>
               </button>
             )}
 
-            {reportOpen && s.report && (() => {
-              const rs = REPORT_STYLES[s.report.eraIdx] ?? REPORT_STYLES[0];
-              return (
-              <div style={{ position: "fixed", inset: 0, background: "rgba(30,22,10,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 20, padding: 12 }} onClick={() => setReportOpen(false)}>
-                <div className={`paper ${rs.cls}`} style={{ maxWidth: 640, width: "100%", maxHeight: "88vh", overflowY: "auto", borderLeft: `5px solid ${rs.accent}`, background: rs.bg, fontFamily: rs.bodyFont }} onClick={(e) => e.stopPropagation()}>
-                  {rs.masthead && <div className="rp-masthead" style={{ color: rs.accent }}>{rs.masthead} · {ERAS[s.report.eraIdx].name}</div>}
+            {reportOpen && s.report && (
+              <div style={{ position: "fixed", inset: 0, background: "rgba(6,12,22,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 20, padding: 12 }} onClick={() => setReportOpen(false)}>
+                <div className="modal-panel" style={{ maxWidth: 640, width: "100%", maxHeight: "88vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                    <h2 style={{ fontFamily: rs.headFont, fontSize: 20, margin: "0 0 10px", color: rs.accent }}>📜 Kertomus vuosilta {s.report.period}</h2>
-                    <button onClick={() => setReportOpen(false)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#7a6a4a", lineHeight: 1 }}>✕</button>
+                    <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, margin: "0 0 10px", color: "#f0e8d2" }}>📜 Kertomus vuosilta {s.report.period}</h2>
+                    <button onClick={() => setReportOpen(false)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#93a3ba", lineHeight: 1 }}>✕</button>
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(260px,1fr))", gap: 16, alignItems: "start" }}>
                     <div>
-                      <p className="rp-story" style={{ fontSize: 15, lineHeight: 1.6, margin: "0 0 10px", fontStyle: rs.cls === "rp-folk" ? "italic" : "normal" }}>{s.report.story}</p>
-                      <div style={{ background: "rgba(138,75,42,0.08)", border: "1px dashed #b08a5a", borderRadius: 6, padding: "8px 12px", fontSize: 13 }}>
-                        💡 <b>Tiesitkö?</b> {s.report.fact}
+                      <div style={{ background: "#12233a", border: "1px solid #2a3d57", borderRadius: 8, padding: "14px 16px", marginBottom: 10 }}>
+                        <div style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "#c9a227", marginBottom: 6 }}>{STORY_LABELS[s.report.eraIdx] ?? STORY_LABELS[0]}</div>
+                        <p style={{ fontSize: 14.5, lineHeight: 1.55, margin: 0, color: "#cfd6de" }}>{s.report.story}</p>
+                      </div>
+                      <div style={{ background: "rgba(201,162,39,0.08)", border: "1px dashed #c9a22766", borderRadius: 6, padding: "8px 12px", fontSize: 13, color: "#cfd6de" }}>
+                        💡 <b style={{ color: "#f0e8d2" }}>Tiesitkö?</b> {s.report.fact}
                       </div>
                     </div>
                     <div>
-                      <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 1.2, color: "#7a6a4a", marginBottom: 6 }}>Vuosi vuodelta</div>
+                      <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 1.2, color: "#93a3ba", marginBottom: 6 }}>Vuosi vuodelta</div>
                       <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
                         {s.report.years.map((y) => (
-                          <div key={y.year} style={{ display: "flex", gap: 8, alignItems: "flex-start", padding: "5px 8px", borderRadius: 6, background: y.primary ? "rgba(138,75,42,0.14)" : "rgba(255,255,255,0.4)", border: y.primary ? "1px solid #b08a5a" : "1px solid transparent" }}>
-                            <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 12, color: "#8a7a5a", minWidth: 32, flexShrink: 0 }}>{y.year}</span>
-                            <span style={{ fontSize: 12.5, lineHeight: 1.35 }}>
-                              <b>{y.name}</b>{y.primary && " ★"}
-                              <span style={{ display: "block", color: "#7a6a4a", fontSize: 11.5 }}>{y.desc}</span>
+                          <div key={y.year} style={{ display: "flex", gap: 8, alignItems: "flex-start", padding: "5px 8px", borderRadius: 6, background: y.primary ? "rgba(201,162,39,0.14)" : "rgba(255,255,255,0.03)", border: y.primary ? "1px solid #c9a22766" : "1px solid transparent" }}>
+                            <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 12, color: "#93a3ba", minWidth: 32, flexShrink: 0 }}>{y.year}</span>
+                            <span style={{ fontSize: 12.5, lineHeight: 1.35, color: "#cfd6de" }}>
+                              <b style={{ color: "#e9e2cf" }}>{y.name}</b>{y.primary && " ★"}
+                              <span style={{ display: "block", color: "#93a3ba", fontSize: 11.5 }}>{y.desc}</span>
                             </span>
                           </div>
                         ))}
                       </div>
-                      <div style={{ fontSize: 10.5, color: "#9a8a6a", fontStyle: "italic", marginTop: 4 }}>★ = tapahtuma, joka todella vaikutti tämän jakson laskelmiin</div>
+                      <div style={{ fontSize: 10.5, color: "#93a3ba", marginTop: 4 }}>★ = tapahtuma, joka todella vaikutti tämän jakson laskelmiin</div>
                     </div>
                   </div>
                   <details style={{ marginTop: 10 }}>
-                    <summary style={{ cursor: "pointer", fontSize: 13, color: "#8a4b2a", fontWeight: 600 }}>Näytä luvut ▸</summary>
+                    <summary style={{ cursor: "pointer", fontSize: 13, color: "#c9a227", fontWeight: 600 }}>Näytä luvut ▸</summary>
                     <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, marginTop: 8 }}>
                       <tbody>
                         {s.report.rows.map(([k, v]) => (
-                          <tr key={k} style={{ borderBottom: "1px dotted #e0d4b4" }}>
-                            <td style={{ padding: "3px 4px", color: k.startsWith("  ") ? "#8a7a5a" : "#3a2f1c", paddingLeft: k.startsWith("  ") ? 20 : 4 }}>{k.trim()}</td>
-                            <td style={{ textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", fontWeight: 600, color: v.startsWith("−") ? "#a02c2c" : v.startsWith("+") ? "#3a6a3a" : "#3a2f1c" }}>{v}</td>
+                          <tr key={k} style={{ borderBottom: "1px dotted #263a54" }}>
+                            <td style={{ padding: "3px 4px", color: k.startsWith("  ") ? "#93a3ba" : "#cfd6de", paddingLeft: k.startsWith("  ") ? 20 : 4 }}>{k.trim()}</td>
+                            <td style={{ textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", fontWeight: 600, color: v.startsWith("−") ? "#c96a5a" : v.startsWith("+") ? "#7fbf8f" : "#e9e2cf" }}>{v}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -1435,29 +1447,31 @@ function Yhteiskunta() {
                   </div>
                 </div>
               </div>
-              ); })()}
+              )}
 
             <div className="grid2">
               <Section title="Työvoiman jako" open={allocOpen} onToggle={() => setAllocOpen(!allocOpen)}>
-                {SECTORS.map(({ key, name, icon }) => (
+                {(() => {
+                  const maxAllocVal = Math.max(...SECTORS.map((x) => alloc[x.key]));
+                  return SECTORS.map(({ key, name, icon }) => (
                   <div key={key} style={{ marginBottom: 13 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontSize: 14, marginBottom: 5 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontSize: 14, marginBottom: 5, color: "#e9e2cf" }}>
                       <span>{icon} {name}</span>
-                      <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontWeight: 600 }}>{alloc[key]} % · {fmt((s.workers * alloc[key]) / 100)} hlö</span>
+                      <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontWeight: 600, color: "#c9a227" }}>{alloc[key]} % · {fmt((s.workers * alloc[key]) / 100)} hlö</span>
                     </div>
                     <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                       <button className="step" onClick={() => setAlloc(key, alloc[key] - 5)} disabled={!!s.gameOver || alloc[key] <= 0}>−5</button>
                       <button className="step" onClick={() => setAlloc(key, alloc[key] - 1)} disabled={!!s.gameOver || alloc[key] <= 0}>−1</button>
-                      <div style={{ flex: 1, height: 16, background: "#e6d9b8", borderRadius: 8, overflow: "hidden", border: "1px solid #cdbb95" }}>
-                        <div style={{ width: `${alloc[key]}%`, height: "100%", background: "linear-gradient(90deg,#a05a30,#8a4b2a)", transition: "width .15s" }} />
+                      <div style={{ flex: 1, height: 8, background: "#1c3049", borderRadius: 4, overflow: "hidden" }}>
+                        <div style={{ width: `${alloc[key]}%`, height: "100%", background: alloc[key] === maxAllocVal ? "linear-gradient(90deg,#a3822a,#c9a227)" : "#c9a227", transition: "width .3s ease" }} />
                       </div>
                       <button className="step" onClick={() => setAlloc(key, alloc[key] + 1)} disabled={!!s.gameOver || alloc[key] >= 100}>+1</button>
                       <button className="step" onClick={() => setAlloc(key, alloc[key] + 5)} disabled={!!s.gameOver || alloc[key] >= 100}>+5</button>
                     </div>
 
                     {key === "farm" && (
-                      <div style={{ marginTop: 6, paddingLeft: 4, borderLeft: "2px solid #d8c9a8" }}>
-                        <div style={{ fontSize: 12, color: "#6a5a3a", marginBottom: 4 }}>
+                      <div style={{ marginTop: 6, paddingLeft: 4, borderLeft: "2px solid #263a54" }}>
+                        <div style={{ fontSize: 12, color: "#93a3ba", marginBottom: 4 }}>
                           🚜 Maatalouden suuntaus <InfoButton title="Maatalouden suuntaus" text="Pienviljely on tasainen ja saatavilla heti. Suurtilat (Teollisesta) nostavat satoa mutta lisäävät saasteita ja herkkyyttä häiriöille. Bioviljely (Modernista) on kestävää ja puhdasta, mutta tuottaa vähemmän. Erikoistuotteet (Teollisesta) tuovat vaurautta ruokaturvan kustannuksella." />
                         </div>
                         <ModeSelector modes={FARM_MODES} current={s.farmMode} onSelect={setFarmMode} eraIdx={s.era} disabled={!!s.gameOver} />
@@ -1465,72 +1479,72 @@ function Yhteiskunta() {
                     )}
 
                     {key === "health" && (
-                      <div style={{ marginTop: 6, paddingLeft: 4, borderLeft: "2px solid #d8c9a8" }}>
+                      <div style={{ marginTop: 6, paddingLeft: 4, borderLeft: "2px solid #263a54" }}>
                         {s.era >= 1 ? (
                           <>
-                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#6a5a3a", marginBottom: 4 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#93a3ba", marginBottom: 4 }}>
                               <span>🏥 Ehkäisevä ↔ Sairaalapainotteinen</span>
-                              <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontWeight: 600 }}>{s.healthFocus}%</span>
+                              <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontWeight: 600, color: "#c9a227" }}>{s.healthFocus}%</span>
                             </div>
                             <div style={{ display: "flex", gap: 5, alignItems: "center", marginBottom: 6 }}>
                               <button className="step" style={{ minWidth: 34, height: 32, fontSize: 13 }} onClick={() => setHealthFocus(s.healthFocus - 10)} disabled={!!s.gameOver || s.healthFocus <= 0}>−10</button>
-                              <div style={{ flex: 1, height: 10, background: "#e6d9b8", borderRadius: 6, overflow: "hidden", border: "1px solid #cdbb95" }}>
-                                <div style={{ width: `${s.healthFocus}%`, height: "100%", background: "linear-gradient(90deg,#3a6a3a,#5c4a7a)" }} />
+                              <div style={{ flex: 1, height: 8, background: "#1c3049", borderRadius: 4, overflow: "hidden" }}>
+                                <div style={{ width: `${s.healthFocus}%`, height: "100%", background: "linear-gradient(90deg,#a3822a,#c9a227)" }} />
                               </div>
                               <button className="step" style={{ minWidth: 34, height: 32, fontSize: 13 }} onClick={() => setHealthFocus(s.healthFocus + 10)} disabled={!!s.gameOver || s.healthFocus >= 100}>+10</button>
                               <InfoButton title="Ehkäisevä vs sairaalapainotteinen hoito" text="Ehkäisevä painotus (arvo lähellä 0 %) suojaa erityisesti lapsia ja hillitsee epidemioita. Sairaalapainotteinen hoito (arvo lähellä 100 %) pelastaa paremmin aikuisia ja vanhuksia akuuteissa tilanteissa. Kumpikaan ei ole ylivoimainen — valinta riippuu siitä, minkä ikäryhmän suojelu on juuri nyt tärkeintä." />
                             </div>
                             {s.era >= 2 ? (
                               <>
-                                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#6a5a3a", marginBottom: 4 }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#93a3ba", marginBottom: 4 }}>
                                   <span>🩺 Erikoislääkärien osuus</span>
-                                  <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontWeight: 600 }}>{s.specialistShare}%</span>
+                                  <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontWeight: 600, color: "#c9a227" }}>{s.specialistShare}%</span>
                                 </div>
                                 <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
                                   <button className="step" style={{ minWidth: 34, height: 32, fontSize: 13 }} onClick={() => setSpecialistShare(s.specialistShare - 10)} disabled={!!s.gameOver || s.specialistShare <= 0}>−10</button>
-                                  <div style={{ flex: 1, height: 10, background: "#e6d9b8", borderRadius: 6, overflow: "hidden", border: "1px solid #cdbb95" }}>
-                                    <div style={{ width: `${s.specialistShare}%`, height: "100%", background: "linear-gradient(90deg,#5c4a7a,#2a6a5c)" }} />
+                                  <div style={{ flex: 1, height: 8, background: "#1c3049", borderRadius: 4, overflow: "hidden" }}>
+                                    <div style={{ width: `${s.specialistShare}%`, height: "100%", background: "linear-gradient(90deg,#a3822a,#c9a227)" }} />
                                   </div>
                                   <button className="step" style={{ minWidth: 34, height: 32, fontSize: 13 }} onClick={() => setSpecialistShare(s.specialistShare + 10)} disabled={!!s.gameOver || s.specialistShare >= 100}>+10</button>
                                   <InfoButton title="Erikoislääkärien osuus" text="Erikoislääkäri kattaa 1,4× yleislääkärin verran — vaativampi koulutuspolku, mutta parempi hoitotulos raskaammissa tapauksissa." />
                                 </div>
                               </>
                             ) : (
-                              <div style={{ fontSize: 10.5, color: "#9a8a6a", fontStyle: "italic" }}>🔒 Erikoislääkärit avautuvat Teollisesta aikakaudesta.</div>
+                              <div style={{ fontSize: 10.5, color: "#93a3ba" }}>🔒 Erikoislääkärit avautuvat Teollisesta aikakaudesta.</div>
                             )}
                           </>
                         ) : (
-                          <div style={{ fontSize: 10.5, color: "#9a8a6a", fontStyle: "italic" }}>🔒 Terveydenhuollon säädöt avautuvat Varhaisteollisesta aikakaudesta.</div>
+                          <div style={{ fontSize: 10.5, color: "#93a3ba" }}>🔒 Terveydenhuollon säädöt avautuvat Varhaisteollisesta aikakaudesta.</div>
                         )}
                       </div>
                     )}
 
                     {key === "research" && (
-                      <div style={{ marginTop: 6, paddingLeft: 4, borderLeft: "2px solid #d8c9a8" }}>
+                      <div style={{ marginTop: 6, paddingLeft: 4, borderLeft: "2px solid #263a54" }}>
                         {s.era >= 1 ? (
                           <>
-                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#6a5a3a", marginBottom: 4 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#93a3ba", marginBottom: 4 }}>
                               <span>🔬 Perustutkimus ↔ Soveltava tutkimus</span>
-                              <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontWeight: 600 }}>{s.appliedShare}%</span>
+                              <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontWeight: 600, color: "#c9a227" }}>{s.appliedShare}%</span>
                             </div>
                             <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
                               <button className="step" style={{ minWidth: 34, height: 32, fontSize: 13 }} onClick={() => setAppliedShare(s.appliedShare - 10)} disabled={!!s.gameOver || s.appliedShare <= 0}>−10</button>
-                              <div style={{ flex: 1, height: 10, background: "#e6d9b8", borderRadius: 6, overflow: "hidden", border: "1px solid #cdbb95" }}>
-                                <div style={{ width: `${s.appliedShare}%`, height: "100%", background: "linear-gradient(90deg,#8a4b2a,#5c4a7a)" }} />
+                              <div style={{ flex: 1, height: 8, background: "#1c3049", borderRadius: 4, overflow: "hidden" }}>
+                                <div style={{ width: `${s.appliedShare}%`, height: "100%", background: "linear-gradient(90deg,#a3822a,#c9a227)" }} />
                               </div>
                               <button className="step" style={{ minWidth: 34, height: 32, fontSize: 13 }} onClick={() => setAppliedShare(s.appliedShare + 10)} disabled={!!s.gameOver || s.appliedShare >= 100}>+10</button>
                               <InfoButton title="Perustutkimus vs soveltava tutkimus" text="Soveltava tutkimus (arvo lähellä 100 %) nostaa tuotannon tehokkuutta heti, mutta hidastaa tutkimuspisteiden kertymistä jopa 40 %. Perustutkimus (arvo lähellä 0 %) on hitaampaa hyödyntää mutta vie aikakautta eteenpäin nopeimmin." />
                             </div>
                           </>
                         ) : (
-                          <div style={{ fontSize: 10.5, color: "#9a8a6a", fontStyle: "italic" }}>🔒 Tutkimuksen suuntaaminen avautuu Varhaisteollisesta aikakaudesta.</div>
+                          <div style={{ fontSize: 10.5, color: "#93a3ba" }}>🔒 Tutkimuksen suuntaaminen avautuu Varhaisteollisesta aikakaudesta.</div>
                         )}
                       </div>
                     )}
 
                     {key === "edu" && (
-                      <div style={{ marginTop: 6, paddingLeft: 4, borderLeft: "2px solid #d8c9a8" }}>
-                        <div style={{ fontSize: 12, color: "#6a5a3a", marginBottom: 4 }}>
+                      <div style={{ marginTop: 6, paddingLeft: 4, borderLeft: "2px solid #263a54" }}>
+                        <div style={{ fontSize: 12, color: "#93a3ba", marginBottom: 4 }}>
                           🎒 Opetuksen suuntaus <InfoButton title="Opetuksen suuntaus" text="Peruskoulutus on tasainen ja avoinna heti. Ammatillinen koulutus (Varhaisteollisesta) nostaa tuotannon tehokkuutta. Korkeakoulutus (Teollisesta) nostaa tutkimusta merkittävästi, mutta tavoittaa harvemman." />
                         </div>
                         <ModeSelector modes={EDU_MODES} current={s.eduMode} onSelect={setEduMode} eraIdx={s.era} disabled={!!s.gameOver} />
@@ -1538,53 +1552,54 @@ function Yhteiskunta() {
                     )}
 
                     {key === "admin" && (
-                      <div style={{ marginTop: 6, paddingLeft: 4, borderLeft: "2px solid #d8c9a8" }}>
+                      <div style={{ marginTop: 6, paddingLeft: 4, borderLeft: "2px solid #263a54" }}>
                         {s.era >= 2 ? (
                           <>
-                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#6a5a3a", marginBottom: 4 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#93a3ba", marginBottom: 4 }}>
                               <span>🕵️ Rikostutkijoiden osuus</span>
-                              <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontWeight: 600 }}>{s.detectiveShare}%</span>
+                              <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontWeight: 600, color: "#c9a227" }}>{s.detectiveShare}%</span>
                             </div>
                             <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
                               <button className="step" style={{ minWidth: 34, height: 32, fontSize: 13 }} onClick={() => setDetectiveShare(s.detectiveShare - 10)} disabled={!!s.gameOver || s.detectiveShare <= 0}>−10</button>
-                              <div style={{ flex: 1, height: 10, background: "#e6d9b8", borderRadius: 6, overflow: "hidden", border: "1px solid #cdbb95" }}>
-                                <div style={{ width: `${s.detectiveShare}%`, height: "100%", background: "linear-gradient(90deg,#5c4a7a,#a02c2c)" }} />
+                              <div style={{ flex: 1, height: 8, background: "#1c3049", borderRadius: 4, overflow: "hidden" }}>
+                                <div style={{ width: `${s.detectiveShare}%`, height: "100%", background: "linear-gradient(90deg,#a3822a,#c9a227)" }} />
                               </div>
                               <button className="step" style={{ minWidth: 34, height: 32, fontSize: 13 }} onClick={() => setDetectiveShare(s.detectiveShare + 10)} disabled={!!s.gameOver || s.detectiveShare >= 100}>+10</button>
                               <InfoButton title="Rikostutkijat" text="Rikostutkijoihin erikoistuva osa hallinnosta laskee rikollisuutta suoraan (jopa −35 % täydellä osuudella), mutta vie resursseja yleisestä hallintokattavuudesta (−15 % täydellä osuudella)." />
                             </div>
                           </>
                         ) : (
-                          <div style={{ fontSize: 10.5, color: "#9a8a6a", fontStyle: "italic" }}>🔒 Rikostutkijat avautuvat Teollisesta aikakaudesta.</div>
+                          <div style={{ fontSize: 10.5, color: "#93a3ba" }}>🔒 Rikostutkijat avautuvat Teollisesta aikakaudesta.</div>
                         )}
                       </div>
                     )}
 
                     {key === "industry" && (
-                      <div style={{ marginTop: 6, paddingLeft: 4, borderLeft: "2px solid #d8c9a8" }}>
+                      <div style={{ marginTop: 6, paddingLeft: 4, borderLeft: "2px solid #263a54" }}>
                         {s.era >= 1 ? (
                           <>
-                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#6a5a3a", marginBottom: 4 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#93a3ba", marginBottom: 4 }}>
                               <span>⚙️ Perustuotanto ↔ Erikoistunut teollisuus</span>
-                              <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontWeight: 600 }}>{s.industryFocus}%</span>
+                              <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontWeight: 600, color: "#c9a227" }}>{s.industryFocus}%</span>
                             </div>
                             <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
                               <button className="step" style={{ minWidth: 34, height: 32, fontSize: 13 }} onClick={() => setIndustryFocus(s.industryFocus - 10)} disabled={!!s.gameOver || s.industryFocus <= 0}>−10</button>
-                              <div style={{ flex: 1, height: 10, background: "#e6d9b8", borderRadius: 6, overflow: "hidden", border: "1px solid #cdbb95" }}>
-                                <div style={{ width: `${s.industryFocus}%`, height: "100%", background: "linear-gradient(90deg,#8a7a5a,#5c4a7a)" }} />
+                              <div style={{ flex: 1, height: 8, background: "#1c3049", borderRadius: 4, overflow: "hidden" }}>
+                                <div style={{ width: `${s.industryFocus}%`, height: "100%", background: "linear-gradient(90deg,#a3822a,#c9a227)" }} />
                               </div>
                               <button className="step" style={{ minWidth: 34, height: 32, fontSize: 13 }} onClick={() => setIndustryFocus(s.industryFocus + 10)} disabled={!!s.gameOver || s.industryFocus >= 100}>+10</button>
                               <InfoButton title="Perustuotanto vs erikoistunut teollisuus" text="Erikoistunut teollisuus (arvo lähellä 100 %) nostaa tehokkuutta, tutkimusta ja BKT:ta, mutta saastuttaa selvästi enemmän kuin perustuotanto." />
                             </div>
                           </>
                         ) : (
-                          <div style={{ fontSize: 10.5, color: "#9a8a6a", fontStyle: "italic" }}>🔒 Teollisuuden suuntaaminen avautuu Varhaisteollisesta aikakaudesta.</div>
+                          <div style={{ fontSize: 10.5, color: "#93a3ba" }}>🔒 Teollisuuden suuntaaminen avautuu Varhaisteollisesta aikakaudesta.</div>
                         )}
                       </div>
                     )}
                   </div>
-                ))}
-                <div style={{ fontSize: 12, color: "#8a7a5a" }}>
+                  ));
+                })()}
+                <div style={{ fontSize: 12, color: "#93a3ba" }}>
                   Työnjaon säännöt <InfoButton title="Työnjaon säännöt" text="Lisätty työvoima otetaan aina suurimmasta sektorista (yleensä pelloilta), ja vapautettu palaa sinne — summa on aina 100 %." />
                 </div>
               </Section>
@@ -1593,57 +1608,57 @@ function Yhteiskunta() {
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
                   <tbody>
                     {professions.map((p) => (
-                      <tr key={p.name} style={{ borderBottom: "1px dotted #cdbb95" }}>
-                        <td style={{ padding: "6px 4px" }}>{p.name}<div style={{ fontSize: 11, color: "#8a7a5a" }}>{p.note}</div></td>
-                        <td style={{ textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", fontWeight: 600 }}>{fmt(p.n)}</td>
+                      <tr key={p.name} style={{ borderBottom: "1px dotted #263a54" }}>
+                        <td style={{ padding: "6px 4px", color: "#cfd6de" }}>{p.name}<div style={{ fontSize: 11, color: "#93a3ba" }}>{p.note}</div></td>
+                        <td style={{ textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", fontWeight: 600, color: "#e9e2cf" }}>{fmt(p.n)}</td>
                       </tr>
                     ))}
-                    <tr><td style={{ padding: "6px 4px", color: "#8a7a5a" }}>Työvoiman ulkopuolella (lapset & vanhukset)</td>
-                      <td style={{ textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", color: "#8a7a5a" }}>{fmt(s.children + s.elderly)}</td></tr>
+                    <tr><td style={{ padding: "6px 4px", color: "#93a3ba" }}>Työvoiman ulkopuolella (lapset & vanhukset)</td>
+                      <td style={{ textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", color: "#93a3ba" }}>{fmt(s.children + s.elderly)}</td></tr>
                   </tbody>
                 </table>
-                <div style={{ marginTop: 10, fontSize: 13, color: "#7a6a4a" }}>
+                <div style={{ marginTop: 10, fontSize: 13, color: "#93a3ba" }}>
                   Aikakauden tausta <InfoButton title={era.name} text={`${era.desc} ${era.hist}`} />
                 </div>
               </Section>
             </div>
 
-            <div style={{ textAlign: "center", margin: "14px 0" }}>
-              <button className="btn" onClick={nextTurn} disabled={!!s.gameOver}>Seuraavat 5 vuotta ▸</button>
+            <div style={{ textAlign: "center", margin: "18px 0" }}>
+              <button className="btn" style={{ width: "100%", maxWidth: 420 }} onClick={nextTurn} disabled={!!s.gameOver}>Etene 5 vuotta →</button>
             </div>
 
             {infoModal && (
-              <div style={{ position: "fixed", inset: 0, background: "rgba(30,22,10,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 25, padding: 12 }} onClick={() => setInfoModal(null)}>
-                <div className="paper" style={{ maxWidth: 460, width: "100%", maxHeight: "80vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+              <div style={{ position: "fixed", inset: 0, background: "rgba(6,12,22,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 25, padding: 12 }} onClick={() => setInfoModal(null)}>
+                <div className="modal-panel" style={{ maxWidth: 460, width: "100%", maxHeight: "80vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                    <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, margin: "0 0 8px" }}>ℹ️ {infoModal.title}</h2>
-                    <button onClick={() => setInfoModal(null)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#7a6a4a", lineHeight: 1 }}>✕</button>
+                    <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 18, margin: "0 0 8px", color: "#f0e8d2" }}>ℹ️ {infoModal.title}</h2>
+                    <button onClick={() => setInfoModal(null)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#93a3ba", lineHeight: 1 }}>✕</button>
                   </div>
-                  <p style={{ fontSize: 14, lineHeight: 1.6, margin: 0 }}>{infoModal.text}</p>
+                  <p style={{ fontSize: 14, lineHeight: 1.6, margin: 0, color: "#cfd6de" }}>{infoModal.text}</p>
                 </div>
               </div>
             )}
 
             <div className="grid-graphlog">
               <div className="paper" style={{ padding: 10 }}>
-                <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 14, margin: "0 0 4px" }}>Väestökehitys</h2>
+                <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 14, margin: "0 0 4px", color: "#f0e8d2" }}>Väestökehitys</h2>
                 <ResponsiveContainer width="100%" height={90}>
                   <LineChart data={s.history} margin={{ top: 5, right: 6, bottom: 0, left: 0 }}>
-                    <CartesianGrid stroke="#d8c9a8" strokeDasharray="3 3" />
-                    <XAxis dataKey="year" stroke="#7a6a4a" fontSize={10} />
-                    <YAxis stroke="#7a6a4a" fontSize={10} tickFormatter={(v) => (v >= 1000 ? v / 1000 + "k" : v)} width={32} />
-                    <Tooltip formatter={(v) => [fmt(v), "Väestö"]} labelFormatter={(y) => "Vuosi " + y} contentStyle={{ background: "#fcf6e8", border: "1px solid #cdbb95", fontFamily: "'IBM Plex Mono',monospace", fontSize: 12 }} />
-                    <Line type="monotone" dataKey="pop" stroke={era.color} strokeWidth={2.5} dot={false} />
+                    <CartesianGrid stroke="#263a54" strokeDasharray="3 3" />
+                    <XAxis dataKey="year" stroke="#93a3ba" fontSize={10} />
+                    <YAxis stroke="#93a3ba" fontSize={10} tickFormatter={(v) => (v >= 1000 ? v / 1000 + "k" : v)} width={32} />
+                    <Tooltip formatter={(v) => [fmt(v), "Väestö"]} labelFormatter={(y) => "Vuosi " + y} contentStyle={{ background: "#0d1c30", border: "1px solid #2a3d57", fontFamily: "'IBM Plex Mono',monospace", fontSize: 12, color: "#e9e2cf" }} />
+                    <Line type="monotone" dataKey="pop" stroke="#c9a227" strokeWidth={2} dot={false} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
 
               <div className="paper" style={{ padding: 10 }}>
-                <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 14, margin: "0 0 4px" }}>Aikakirjat</h2>
+                <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 14, margin: "0 0 4px", color: "#f0e8d2" }}>Aikakirjat</h2>
                 <div style={{ maxHeight: 110, overflowY: "auto" }}>
                   {s.log.map((l, i) => (
-                    <div key={i} style={{ padding: "3px 6px", fontSize: 12.5, borderLeft: `3px solid ${l.tone === "bad" ? "#a02c2c" : l.tone === "good" ? "#3a6a3a" : "#8a7a5a"}`, marginBottom: 3, background: "rgba(255,255,255,0.35)" }}>
-                      <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 11, color: "#8a7a5a", marginRight: 6 }}>v.{l.year}</span>{l.text}
+                    <div key={i} style={{ padding: "3px 6px", fontSize: 12.5, borderLeft: `3px solid ${l.tone === "bad" ? "#c96a5a" : l.tone === "good" ? "#7fbf8f" : "#93a3ba"}`, marginBottom: 3, background: "rgba(255,255,255,0.03)", color: "#cfd6de" }}>
+                      <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 11, color: "#93a3ba", marginRight: 6 }}>v.{l.year}</span>{l.text}
                     </div>
                   ))}
                 </div>
@@ -1653,63 +1668,63 @@ function Yhteiskunta() {
         )}
 
         {s.gameOver && (
-          <div style={{ position: "fixed", inset: 0, background: "rgba(30,22,10,0.75)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 10, padding: 12 }}>
-            <div className="paper" style={{ maxWidth: 480, width: "100%", textAlign: "center", padding: 24, maxHeight: "90vh", overflowY: "auto" }}>
-              <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 28, margin: "0 0 10px", color: s.gameOver.win ? "#3a6a3a" : "#a02c2c" }}>
+          <div style={{ position: "fixed", inset: 0, background: "rgba(6,12,22,0.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 10, padding: 12 }}>
+            <div className="modal-panel" style={{ maxWidth: 480, width: "100%", textAlign: "center", padding: 24, maxHeight: "90vh", overflowY: "auto" }}>
+              <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 28, margin: "0 0 10px", color: s.gameOver.win ? "#7fbf8f" : "#c96a5a" }}>
                 {s.gameOver.win ? "Sivilisaatio kukoistaa" : "Yhteisö romahti"}
               </h2>
-              <p style={{ fontSize: 16, margin: "0 0 8px" }}>{s.gameOver.text}</p>
+              <p style={{ fontSize: 16, margin: "0 0 8px", color: "#cfd6de" }}>{s.gameOver.text}</p>
 
-              <div style={{ fontFamily: "'Playfair Display',serif", fontSize: 40, fontWeight: 900, color: "#8a4b2a", margin: "6px 0 2px" }}>{fmt(score.total)}</div>
-              <div style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: 1.5, color: "#7a6a4a", marginBottom: 8 }}>Sivilisaatioindeksi</div>
+              <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 40, fontWeight: 700, color: "#c9a227", margin: "6px 0 2px" }}>{fmt(score.total)}</div>
+              <div style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: 1.5, color: "#93a3ba", marginBottom: 8 }}>Sivilisaatioindeksi</div>
               <table style={{ width: "100%", fontSize: 13, borderCollapse: "collapse", marginBottom: 12 }}>
                 <tbody>
                   {Object.entries(score.parts).map(([k, v]) => (
-                    <tr key={k} style={{ borderBottom: "1px dotted #e0d4b4" }}>
-                      <td style={{ textAlign: "left", padding: "3px 4px" }}>{k}</td>
-                      <td style={{ textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", fontWeight: 600 }}>{fmt(v)}</td>
+                    <tr key={k} style={{ borderBottom: "1px dotted #263a54" }}>
+                      <td style={{ textAlign: "left", padding: "3px 4px", color: "#cfd6de" }}>{k}</td>
+                      <td style={{ textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", fontWeight: 600, color: "#e9e2cf" }}>{fmt(v)}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
 
               {window.storage && (
-                <div style={{ background: "rgba(255,255,255,0.5)", border: "1px solid #d8c9a8", borderRadius: 8, padding: 12, marginBottom: 12 }}>
-                  <div style={{ fontFamily: "'Playfair Display',serif", fontSize: 17, fontWeight: 700, marginBottom: 8 }}>🏆 Yhteinen tulostaulu</div>
+                <div style={{ background: "#12233a", border: "1px solid #2a3d57", borderRadius: 8, padding: 12, marginBottom: 12 }}>
+                  <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 17, fontWeight: 700, marginBottom: 8, color: "#f0e8d2" }}>🏆 Yhteinen tulostaulu</div>
                   {!scoreSaved ? (
                     <div style={{ display: "flex", gap: 8 }}>
                       <input value={playerName} onChange={(e) => setPlayerName(e.target.value)} placeholder="Nimesi tulostaululle" maxLength={20}
-                        style={{ flex: 1, padding: "10px 12px", fontSize: 15, fontFamily: "'Crimson Pro',serif", border: "1.5px solid #8a4b2a", borderRadius: 8, background: "#fcf6e8", minWidth: 0 }} />
+                        style={{ flex: 1, padding: "10px 12px", fontSize: 15, fontFamily: "'Source Sans 3',sans-serif", color: "#e9e2cf", border: "1.5px solid #c9a22766", borderRadius: 8, background: "#0d1c30", minWidth: 0 }} />
                       <button className="btn" style={{ padding: "10px 16px", fontSize: 15 }} onClick={submitScore} disabled={!playerName.trim()}>Tallenna</button>
                     </div>
                   ) : (
-                    <div style={{ color: "#3a6a3a", fontSize: 14, fontWeight: 600 }}>✓ Tulos tallennettu!</div>
+                    <div style={{ color: "#7fbf8f", fontSize: 14, fontWeight: 600 }}>✓ Tulos tallennettu!</div>
                   )}
-                  <div style={{ fontSize: 11, color: "#8a7a5a", marginTop: 6, fontStyle: "italic" }}>Nimi ja tulos näkyvät kaikille tämän pelin pelaajille.</div>
+                  <div style={{ fontSize: 11, color: "#93a3ba", marginTop: 6 }}>Nimi ja tulos näkyvät kaikille tämän pelin pelaajille.</div>
                   {board && board.length > 0 && (
                     <table style={{ width: "100%", fontSize: 13, borderCollapse: "collapse", marginTop: 10 }}>
                       <tbody>
                         {board.slice(0, 10).map((r, i) => (
-                          <tr key={i} style={{ borderBottom: "1px dotted #e0d4b4", background: scoreSaved && r.name === playerName.trim() && r.score === score.total ? "rgba(138,75,42,0.12)" : "transparent" }}>
-                            <td style={{ textAlign: "left", padding: "3px 4px", fontFamily: "'IBM Plex Mono',monospace", color: "#8a7a5a" }}>{i + 1}.</td>
-                            <td style={{ textAlign: "left", padding: "3px 4px" }}>{r.icon} {r.name} <span style={{ color: "#8a7a5a", fontSize: 11 }}>({r.civ}{r.win ? " · voitto" : ""})</span></td>
-                            <td style={{ textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", fontWeight: 600 }}>{fmt(r.score)}</td>
+                          <tr key={i} style={{ borderBottom: "1px dotted #263a54", background: scoreSaved && r.name === playerName.trim() && r.score === score.total ? "rgba(201,162,39,0.12)" : "transparent" }}>
+                            <td style={{ textAlign: "left", padding: "3px 4px", fontFamily: "'IBM Plex Mono',monospace", color: "#93a3ba" }}>{i + 1}.</td>
+                            <td style={{ textAlign: "left", padding: "3px 4px", color: "#cfd6de" }}>{r.icon} {r.name} <span style={{ color: "#93a3ba", fontSize: 11 }}>({r.civ}{r.win ? " · voitto" : ""})</span></td>
+                            <td style={{ textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", fontWeight: 600, color: "#e9e2cf" }}>{fmt(r.score)}</td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   )}
-                  {board && board.length === 0 && <div style={{ fontSize: 13, color: "#8a7a5a", marginTop: 8 }}>Ole ensimmäinen tulostaululla!</div>}
+                  {board && board.length === 0 && <div style={{ fontSize: 13, color: "#93a3ba", marginTop: 8 }}>Ole ensimmäinen tulostaululla!</div>}
                 </div>
               )}
 
-              <p style={{ fontSize: 13, color: "#7a6a4a", margin: "0 0 10px" }}>Väestöhuippu: {fmt(Math.max(...s.history.map((h) => h.pop)))} · Vuosia: {s.year}</p>
+              <p style={{ fontSize: 13, color: "#93a3ba", margin: "0 0 10px" }}>Väestöhuippu: {fmt(Math.max(...s.history.map((h) => h.pop)))} · Vuosia: {s.year}</p>
               <button className="btn" onClick={() => { setS(makeStart(null)); setScoreSaved(false); setBoard(null); setPendingCiv(null); setChosenSkills([]); setVillageNameInput(""); }}>Valitse uusi sivilisaatio ↺</button>
             </div>
           </div>
         )}
 
-        <footer style={{ textAlign: "center", fontSize: 12, color: "#8a7a5a", margin: "20px 0 8px", fontStyle: "italic" }}>
+        <footer style={{ textAlign: "center", fontSize: 12, color: "#93a3ba", margin: "20px 0 8px" }}>
           Malli on karkea yksinkertaistus — mutta suhdeluvut (viljelijän tuottavuus, 1,8 % terveydenhuoltoon, 1 opettaja / 20 lasta) pohjaavat historiallisiin arvioihin.
         </footer>
       </div>
@@ -1718,8 +1733,10 @@ function Yhteiskunta() {
 }
 
 
+
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(React.createElement(Yhteiskunta));
 </script>
 </body>
 </html>
+
