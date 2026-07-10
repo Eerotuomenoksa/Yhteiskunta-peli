@@ -1,0 +1,23 @@
+{
+  "name": "yhteiskunta",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Yhteiskunta-pelin build-pipeline (Vite). Ks. README.md ja KEHITYSSUUNNITELMA_2026-07.md.",
+  "type": "commonjs",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "check-syntax": "node tools/check-syntax.js",
+    "check-data-sync": "node tools/check-data-sync.js"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "recharts": "^2.12.7"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.1",
+    "vite": "^5.4.0"
+  }
+}

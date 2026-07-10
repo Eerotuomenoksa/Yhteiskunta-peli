@@ -14,5 +14,19 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Tarkista JSX/JS-syntaksi
+      - name: Tarkista JSX/JS-syntaksi (CDN-fallback + jsx)
         run: node tools/check-syntax.js
+      - name: Tarkista data/tietolaatikot.mjs on ajan tasalla
+        run: node tools/check-data-sync.js
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Vite-build (game/ -> dist/)
+        run: npm run build

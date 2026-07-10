@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
-// Ladataan globaalisti (ei vielä import/export - ks. data/tietolaatikot.js:n yläkommentti, korjataan Vite-migraatiossa)
-/* global TIETOLAATIKOT, tietolaatikkoKentta */
+// data/tietolaatikot.mjs on Vite-buildin käyttämä ES-moduuli, mekaanisesti generoitu
+// data/tietolaatikot.js:stä (tools/build-tietolaatikot-esm.js). Älä muokkaa .mjs:ää suoraan.
+import { tietolaatikkoKentta } from "../data/tietolaatikot.mjs";
 
 // ============ AIKAKAUDET ============
 // Tuottavuusluvut pohjaavat tutkimukseen: ennen teollistumista 80–90 % väestöstä teki maataloustyötä,

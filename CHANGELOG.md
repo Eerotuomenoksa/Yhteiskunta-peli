@@ -13,6 +13,11 @@ Kehitteillä `dev`-haarassa, ei vielä julkaistu testaajille.
 - [KEHITYSSUUNNITELMA_2026-07.md](KEHITYSSUUNNITELMA_2026-07.md): yhden kuukauden (13.7.–7.8.) kehityssuunnitelma pilottivalmiuteen, ja [BACKLOG.md](BACKLOG.md) scope-creepin hallintaan
 - Tietolaatikoiden rakenne- ja sisältösuunnitelma ([TIETOLAATIKKO_UI_SIJOITTELU.md](TIETOLAATIKKO_UI_SIJOITTELU.md), [TIETOLAATIKKO_SISALLOT.md](TIETOLAATIKKO_SISALLOT.md)): 6 kategoriaa, 26 tietolaatikkoa (13 olemassa olevaa + 13 uutta luonnosta)
 - `data/tietolaatikot.js`: 13 olemassa olevaa info-selitettä siirretty koodista dataksi (ei sisältömuutoksia), kaikki `InfoButton`-kutsut lukevat nyt datasta
+- Vite-build-pipeline (D2): `npm run build` tuottaa itsenäisen `dist/`-bundlen (`game/yhteiskunta.jsx` + React + Recharts, ei CDN-riippuvuutta). `game/yhteiskunta.html` (CDN-fallback) säilyy koskemattomana rinnalla. `data/tietolaatikot.mjs` on automaattisesti generoitu ES-moduuliversio Vite-buildia varten (`tools/build-tietolaatikot-esm.js`), synkkatarkistettu CI:ssä (`tools/check-data-sync.js`)
+
+### Tunnetut rajoitukset (päivitys)
+
+- Vite-bundlea ei tässä ympäristössä pystytty todentamaan oikealla selaimella asti (Edge-käynnistys estyi työkoneen käytännöillä) — todennettu build-tulosteen sisällöllä, paikallisella palvelimella (200 OK) ja sillä, että jsdom vahvisti saman lähdekoodin toimivan CDN-versiona. Suositellaan manuaalista selainkokeilua ennen kuin bundle korvaa fallbackin tuotannossa.
 
 ## [0.1.0] — 2026-07-09
 
