@@ -1,5 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
+// Ladataan globaalisti (ei vielä import/export - ks. data/tietolaatikot.js:n yläkommentti, korjataan Vite-migraatiossa)
+/* global TIETOLAATIKOT, tietolaatikkoKentta */
 
 // ============ AIKAKAUDET ============
 // Tuottavuusluvut pohjaavat tutkimukseen: ennen teollistumista 80–90 % väestöstä teki maataloustyötä,
@@ -1563,6 +1565,9 @@ const makeStart = (civ, villageName, startSkills, lang = "fi") => {
 
 const fmt = (n) => Math.round(n).toLocaleString("fi-FI");
 
+// Yhdistää METRICS-taulukon avaimet data/tietolaatikot.js:n tietolaatikko-id:hin (ks. TIETOLAATIKKO_SISALLOT.md)
+const METRIC_ID_MAP = { lifeExpectancy: "elinajanodote", employmentRate: "tyollisyysaste", pollution: "saasteindeksi", gdpPerCapita: "bkt_per_asukas", crimeRate: "rikollisuusaste", happiness: "onnellisuusindeksi" };
+
 export default function Yhteiskunta() {
   const [s, setS] = useState(makeStart(null));
   // ---- Aloitusnäkymä: sivilisaation valinta -> kylän nimeäminen ja aloitustaitojen valinta ----
@@ -2426,7 +2431,7 @@ export default function Yhteiskunta() {
                       <div key={m.key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 4px", borderBottom: "1px dotted #263a54" }}>
                         <div>
                           <span style={{ fontSize: 14, color: "#cfd6de" }}>{m.icon} {tc("metrics", m.key, "name", m.name)}</span>
-                          {unlocked && <InfoButton title={tc("metrics", m.key, "infoTitle", m.infoTitle)} text={tc("metrics", m.key, "infoText", m.infoText)} />}
+                          {unlocked && <InfoButton title={tietolaatikkoKentta(METRIC_ID_MAP[m.key], "otsikko", lang)} text={tietolaatikkoKentta(METRIC_ID_MAP[m.key], "sisalto", lang)} />}
                           {!unlocked && <div style={{ fontSize: 10.5, color: "#93a3ba" }}>{t("metricLocked")(CE(lang, s.civ?.key, m.unlockEra, "name", TE(lang, m.unlockEra, "name", ERAS[m.unlockEra].name)))}</div>}
                         </div>
                         {unlocked && (
@@ -2720,7 +2725,7 @@ export default function Yhteiskunta() {
                     {key === "farm" && (
                       <div style={{ marginTop: 6, paddingLeft: 4, borderLeft: "2px solid #263a54" }}>
                         <div style={{ fontSize: 12, color: "#93a3ba", marginBottom: 4 }}>
-                          {t("farmModeLabel")} <InfoButton title={t("farmModeInfoTitle")} text={t("farmModeInfoText")} />
+                          {t("farmModeLabel")} <InfoButton title={tietolaatikkoKentta("maatalousmoodi", "otsikko", lang)} text={tietolaatikkoKentta("maatalousmoodi", "sisalto", lang)} />
                         </div>
                         <ModeSelector modes={FARM_MODES} current={s.farmMode} onSelect={setFarmMode} eraIdx={s.era} disabled={!!s.gameOver} table="farmModes" />
                       </div>
@@ -2740,7 +2745,7 @@ export default function Yhteiskunta() {
                                 <div style={{ width: `${s.healthFocus}%`, height: "100%", background: "linear-gradient(90deg,#a3822a,#c9a227)" }} />
                               </div>
                               <button className="step" style={{ minWidth: 34, height: 32, fontSize: 13 }} onClick={() => setHealthFocus(s.healthFocus + 10)} disabled={!!s.gameOver || s.healthFocus >= 100}>+10</button>
-                              <InfoButton title={t("healthFocusInfoTitle")} text={t("healthFocusInfoText")} />
+                              <InfoButton title={tietolaatikkoKentta("terveyspainotus", "otsikko", lang)} text={tietolaatikkoKentta("terveyspainotus", "sisalto", lang)} />
                             </div>
                             {s.era >= 3 ? (
                               <>
@@ -2754,7 +2759,7 @@ export default function Yhteiskunta() {
                                     <div style={{ width: `${s.specialistShare}%`, height: "100%", background: "linear-gradient(90deg,#a3822a,#c9a227)" }} />
                                   </div>
                                   <button className="step" style={{ minWidth: 34, height: 32, fontSize: 13 }} onClick={() => setSpecialistShare(s.specialistShare + 10)} disabled={!!s.gameOver || s.specialistShare >= 100}>+10</button>
-                                  <InfoButton title={t("specialistInfoTitle")} text={t("specialistInfoText")} />
+                                  <InfoButton title={tietolaatikkoKentta("erikoislaakarit", "otsikko", lang)} text={tietolaatikkoKentta("erikoislaakarit", "sisalto", lang)} />
                                 </div>
                               </>
                             ) : (
@@ -2781,7 +2786,7 @@ export default function Yhteiskunta() {
                                 <div style={{ width: `${s.appliedShare}%`, height: "100%", background: "linear-gradient(90deg,#a3822a,#c9a227)" }} />
                               </div>
                               <button className="step" style={{ minWidth: 34, height: 32, fontSize: 13 }} onClick={() => setAppliedShare(s.appliedShare + 10)} disabled={!!s.gameOver || s.appliedShare >= 100}>+10</button>
-                              <InfoButton title={t("appliedInfoTitle")} text={t("appliedInfoText")} />
+                              <InfoButton title={tietolaatikkoKentta("tutkimussuuntaus", "otsikko", lang)} text={tietolaatikkoKentta("tutkimussuuntaus", "sisalto", lang)} />
                             </div>
                           </>
                         ) : (
@@ -2793,7 +2798,7 @@ export default function Yhteiskunta() {
                     {key === "edu" && (
                       <div style={{ marginTop: 6, paddingLeft: 4, borderLeft: "2px solid #263a54" }}>
                         <div style={{ fontSize: 12, color: "#93a3ba", marginBottom: 4 }}>
-                          {t("eduModeLabel")} <InfoButton title={t("eduModeInfoTitle")} text={t("eduModeInfoText")} />
+                          {t("eduModeLabel")} <InfoButton title={tietolaatikkoKentta("opetussuuntaus", "otsikko", lang)} text={tietolaatikkoKentta("opetussuuntaus", "sisalto", lang)} />
                         </div>
                         <ModeSelector modes={EDU_MODES} current={s.eduMode} onSelect={setEduMode} eraIdx={s.era} disabled={!!s.gameOver} table="eduModes" />
                       </div>
@@ -2813,7 +2818,7 @@ export default function Yhteiskunta() {
                                 <div style={{ width: `${s.detectiveShare}%`, height: "100%", background: "linear-gradient(90deg,#a3822a,#c9a227)" }} />
                               </div>
                               <button className="step" style={{ minWidth: 34, height: 32, fontSize: 13 }} onClick={() => setDetectiveShare(s.detectiveShare + 10)} disabled={!!s.gameOver || s.detectiveShare >= 100}>+10</button>
-                              <InfoButton title={t("detectiveInfoTitle")} text={t("detectiveInfoText")} />
+                              <InfoButton title={tietolaatikkoKentta("rikostutkijat", "otsikko", lang)} text={tietolaatikkoKentta("rikostutkijat", "sisalto", lang)} />
                             </div>
                           </>
                         ) : (
@@ -2836,7 +2841,7 @@ export default function Yhteiskunta() {
                                 <div style={{ width: `${s.industryFocus}%`, height: "100%", background: "linear-gradient(90deg,#a3822a,#c9a227)" }} />
                               </div>
                               <button className="step" style={{ minWidth: 34, height: 32, fontSize: 13 }} onClick={() => setIndustryFocus(s.industryFocus + 10)} disabled={!!s.gameOver || s.industryFocus >= 100}>+10</button>
-                              <InfoButton title={t("industryInfoTitle")} text={t("industryInfoText")} />
+                              <InfoButton title={tietolaatikkoKentta("teollisuussuuntaus", "otsikko", lang)} text={tietolaatikkoKentta("teollisuussuuntaus", "sisalto", lang)} />
                             </div>
                           </>
                         ) : (
