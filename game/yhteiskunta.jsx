@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 // data/tietolaatikot.mjs on Vite-buildin käyttämä ES-moduuli, mekaanisesti generoitu
 // data/tietolaatikot.js:stä (tools/build-tietolaatikot-esm.js). Älä muokkaa .mjs:ää suoraan.
-import { tietolaatikkoKentta } from "../data/tietolaatikot.mjs";
+import { TIETOLAATIKOT, TIETOLAATIKKO_KATEGORIAT, tietolaatikkoKentta } from "../data/tietolaatikot.mjs";
 
 // ============ AIKAKAUDET ============
 // Tuottavuusluvut pohjaavat tutkimukseen: ennen teollistumista 80–90 % väestöstä teki maataloustyötä,
@@ -954,6 +954,10 @@ const UI_STRINGS = {
     metricsModalTitle: "📈 Yhteiskuntamittarit",
     metricsModalIntro: "Mittarit mukailevat oikeita yhteiskuntatieteen tunnuslukuja ja avautuvat sitä mukaa kun vastaava mittausmenetelmä syntyi historiassa. Kunkin ℹ️ kertoo, miten oikea mittari lasketaan.",
     metricLocked: (era) => `🔒 Avautuu aikakaudella: ${era}`,
+    tietopankkiBtn: "🗂️ Tietopankki ▸",
+    tietopankkiModalTitle: "🗂️ Tietopankki",
+    tietopankkiModalIntro: "Kaikki pelin tietolaatikot koottuna kuuteen aiheeseen. Osa avautuu vasta myöhemmillä aikakausilla.",
+    tietopankkiLocked: (era) => `🔒 Avautuu aikakaudella: ${era}`,
     historyModalTitle: (village) => village ? `📖 ${village}n historia` : "📖 Yhteisöni historia",
     historyModalIntro: "Tämä näkymä kokoaa yhteisösi koko tarinan — hyvä pohja esitellä muille, mitä valintoja teit ja miksi.",
     startSkillsLabel: (list) => `Aloitustaidot: ${list}`,
@@ -1095,6 +1099,10 @@ const UI_STRINGS = {
     metricsModalTitle: "📈 Society metrics",
     metricsModalIntro: "These metrics mirror real social-science indicators and unlock as the corresponding measurement method emerged in history. Each ℹ️ explains how the real metric is calculated.",
     metricLocked: (era) => `🔒 Unlocks in the ${era} era`,
+    tietopankkiBtn: "🗂️ Knowledge base ▸",
+    tietopankkiModalTitle: "🗂️ Knowledge base",
+    tietopankkiModalIntro: "All the game's info boxes gathered into six topics. Some unlock only in later eras.",
+    tietopankkiLocked: (era) => `🔒 Unlocks in the ${era} era`,
     historyModalTitle: (village) => village ? `📖 History of ${village}` : "📖 My community's history",
     historyModalIntro: "This view gathers your community's whole story — a good basis for presenting to others what choices you made and why.",
     startSkillsLabel: (list) => `Starting skills: ${list}`,
@@ -1236,6 +1244,10 @@ const UI_STRINGS = {
     metricsModalTitle: "📈 Samfundsmål",
     metricsModalIntro: "Målene efterligner rigtige samfundsvidenskabelige nøgletal og låses op i takt med, at den tilsvarende målemetode opstod i historien. Hver ℹ️ forklarer, hvordan det rigtige mål beregnes.",
     metricLocked: (era) => `🔒 Låses op i ${era}tidsalderen`,
+    tietopankkiBtn: "🗂️ Videnbank ▸",
+    tietopankkiModalTitle: "🗂️ Videnbank",
+    tietopankkiModalIntro: "Alle spillets infobokse samlet i seks emner. Nogle låses først op i senere tidsaldre.",
+    tietopankkiLocked: (era) => `🔒 Låses op i ${era}tidsalderen`,
     historyModalTitle: (village) => village ? `📖 ${village}s historie` : "📖 Mit samfunds historie",
     historyModalIntro: "Denne visning samler hele dit samfunds historie — et godt grundlag for at præsentere for andre, hvilke valg du traf og hvorfor.",
     startSkillsLabel: (list) => `Startfærdigheder: ${list}`,
@@ -1695,6 +1707,9 @@ export default function Yhteiskunta() {
   const [nationOpen, setNationOpen] = useState(false);
   const [metricsOpen, setMetricsOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [tietopankkiOpen, setTietopankkiOpen] = useState(false);
+  const [tietopankkiTab, setTietopankkiTab] = useState(TIETOLAATIKKO_KATEGORIAT[0].avain);
+  const [tietopankkiItem, setTietopankkiItem] = useState(null);
   const [studentNotes, setStudentNotes] = useState("");
   const [copyDone, setCopyDone] = useState(false);
   // ---- Kokoontaitettavat osiot (mobiiliystävällisyys) ----
@@ -2383,6 +2398,9 @@ export default function Yhteiskunta() {
               <button onClick={() => setHistoryOpen(true)} className="info-pill">
                 {t("historyBtn")}
               </button>
+              <button onClick={() => setTietopankkiOpen(true)} className="info-pill">
+                {t("tietopankkiBtn")}
+              </button>
             </div>
 
             {nationOpen && (
@@ -2439,6 +2457,55 @@ export default function Yhteiskunta() {
                           <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontWeight: 600, fontSize: 15, color: "#e9e2cf" }}>
                             {m.decimals ? val.toFixed(m.decimals) : Math.round(val)}{mUnit}
                           </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {tietopankkiOpen && (
+              <div style={{ position: "fixed", inset: 0, background: "rgba(6,12,22,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 20, padding: 12 }} onClick={() => { setTietopankkiOpen(false); setTietopankkiItem(null); }}>
+                <div className="modal-panel" style={{ maxWidth: 620, width: "100%", maxHeight: "88vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                    <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, margin: "0 0 6px", color: "#f0e8d2" }}>{t("tietopankkiModalTitle")}</h2>
+                    <button onClick={() => { setTietopankkiOpen(false); setTietopankkiItem(null); }} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#93a3ba", lineHeight: 1 }}>✕</button>
+                  </div>
+                  <p style={{ fontSize: 13, color: "#93a3ba", margin: "0 0 12px" }}>{t("tietopankkiModalIntro")}</p>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
+                    {TIETOLAATIKKO_KATEGORIAT.map((kat) => (
+                      <button
+                        key={kat.avain}
+                        onClick={() => { setTietopankkiTab(kat.avain); setTietopankkiItem(null); }}
+                        className="action-pill"
+                        style={{ padding: "6px 12px", fontSize: 12.5, opacity: tietopankkiTab === kat.avain ? 1 : 0.5 }}
+                      >
+                        {kat.ikoni} {(kat.nimi && kat.nimi[lang]) || kat.nimi.fi}
+                      </button>
+                    ))}
+                  </div>
+                  {TIETOLAATIKOT.filter((item) => item.kategoria === tietopankkiTab).map((item) => {
+                    const unlocked = s.era >= item.aikakausiehto;
+                    const isOpen = tietopankkiItem === item.id;
+                    return (
+                      <div key={item.id} style={{ padding: "8px 4px", borderBottom: "1px dotted #263a54" }}>
+                        <div
+                          style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: unlocked ? "pointer" : "default" }}
+                          onClick={() => unlocked && setTietopankkiItem(isOpen ? null : item.id)}
+                        >
+                          <span style={{ fontSize: 14, color: unlocked ? "#cfd6de" : "#728098" }}>
+                            {tietolaatikkoKentta(item.id, "otsikko", lang)}
+                          </span>
+                          {unlocked && <span style={{ color: "#93a3ba", fontSize: 12 }}>{isOpen ? "▲" : "▾"}</span>}
+                        </div>
+                        {!unlocked && (
+                          <div style={{ fontSize: 10.5, color: "#93a3ba" }}>
+                            {t("tietopankkiLocked")(CE(lang, s.civ?.key, item.aikakausiehto, "name", TE(lang, item.aikakausiehto, "name", ERAS[item.aikakausiehto].name)))}
+                          </div>
+                        )}
+                        {unlocked && isOpen && (
+                          <p style={{ fontSize: 13, color: "#cfd6de", margin: "6px 0 0" }}>{tietolaatikkoKentta(item.id, "sisalto", lang)}</p>
                         )}
                       </div>
                     );

@@ -14,10 +14,9 @@ Kehitteillä `dev`-haarassa, ei vielä julkaistu testaajille.
 - Tietolaatikoiden rakenne- ja sisältösuunnitelma ([TIETOLAATIKKO_UI_SIJOITTELU.md](TIETOLAATIKKO_UI_SIJOITTELU.md), [TIETOLAATIKKO_SISALLOT.md](TIETOLAATIKKO_SISALLOT.md)): 6 kategoriaa, 26 tietolaatikkoa (13 olemassa olevaa + 13 uutta luonnosta)
 - `data/tietolaatikot.js`: 13 olemassa olevaa info-selitettä siirretty koodista dataksi (ei sisältömuutoksia), kaikki `InfoButton`-kutsut lukevat nyt datasta
 - Vite-build-pipeline (D2): `npm run build` tuottaa itsenäisen `dist/`-bundlen (`game/yhteiskunta.jsx` + React + Recharts, ei CDN-riippuvuutta). `game/yhteiskunta.html` (CDN-fallback) säilyy koskemattomana rinnalla. `data/tietolaatikot.mjs` on automaattisesti generoitu ES-moduuliversio Vite-buildia varten (`tools/build-tietolaatikot-esm.js`), synkkatarkistettu CI:ssä (`tools/check-data-sync.js`)
+- 🗂️ Tietopankki-paneeli pelinäkymään: kaikki 26 tietolaatikkoa selattavissa kuudessa välilehdessä (Väestö & terveys, Talous & työ, Yhteiskunta & hallinto, Ympäristö, Koulutus & tiede, Historia & aikakaudet), aikakausiehdon mukaan lukittuna/avattuna, sisältö avautuu klikkauksesta
 
-### Tunnetut rajoitukset (päivitys)
-
-- Vite-bundlea ei tässä ympäristössä pystytty todentamaan oikealla selaimella asti (Edge-käynnistys estyi työkoneen käytännöillä) — todennettu build-tulosteen sisällöllä, paikallisella palvelimella (200 OK) ja sillä, että jsdom vahvisti saman lähdekoodin toimivan CDN-versiona. Suositellaan manuaalista selainkokeilua ennen kuin bundle korvaa fallbackin tuotannossa.
+Vite-bundle vahvistettu toimivaksi oikeassa selaimessa (Edge) 10.7. — automatisoitu selainklikkaustestaus ei onnistunut tässä ympäristössä, mutta manuaalinen kokeilu vahvisti build-tuloksen toimivan.
 
 ## [0.1.0] — 2026-07-09
 
