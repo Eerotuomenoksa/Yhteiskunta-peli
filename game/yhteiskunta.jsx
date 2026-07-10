@@ -2153,9 +2153,9 @@ export default function Yhteiskunta() {
 
   const foodBalance = derived.foodProd - derived.foodNeed;
 
-  const Stat = ({ label, value, sub, warn }) => (
+  const Stat = ({ label, value, sub, warn, info }) => (
     <div style={{ background: "#12233a", padding: "10px 14px", minWidth: 0 }}>
-      <div style={{ fontSize: 10.5, textTransform: "uppercase", letterSpacing: 1.5, color: "#93a3ba", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{label}</div>
+      <div style={{ fontSize: 10.5, textTransform: "uppercase", letterSpacing: 1.5, color: "#93a3ba", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{label}{info && <InfoButton title={info.title} text={info.text} />}</div>
       <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 18, fontWeight: 600, color: warn ? "#c96a5a" : "#e9e2cf", lineHeight: 1.3 }}>{value}</div>
       {sub && <div style={{ fontSize: 10.5, color: warn ? "#c96a5a" : "#93a3ba", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{sub}</div>}
     </div>
@@ -2360,7 +2360,7 @@ export default function Yhteiskunta() {
           <>
             <div className="stat-grid">
               <Stat label={t("statPop")} value={fmt(pop)} sub={`👶${fmt(s.children)} 💪${fmt(s.workers)} 👴${fmt(s.elderly)}`} warn={pop < 2000} />
-              <Stat label={t("statFood")} value={fmt(s.foodStore)} sub={`${t("statBalance")} ${foodBalance >= 0 ? "+" : ""}${fmt(foodBalance)}`} warn={foodBalance < 0 && s.foodStore < pop * 0.5} />
+              <Stat label={t("statFood")} value={fmt(s.foodStore)} sub={`${t("statBalance")} ${foodBalance >= 0 ? "+" : ""}${fmt(foodBalance)}`} warn={foodBalance < 0 && s.foodStore < pop * 0.5} info={{ title: tietolaatikkoKentta("ruokaturva_nalanhata", "otsikko", lang), text: tietolaatikkoKentta("ruokaturva_nalanhata", "sisalto", lang) }} />
               <Stat label={t("statResearch")} value={nextEra ? `${fmt(s.research)}/${fmt(nextEra.research)}` : fmt(s.research)} sub={nextEra ? `→ ${CE(lang, s.civ?.key, s.era + 1, "name", TE(lang, s.era + 1, "name", nextEra.name))}` : t("statTopEra")} />
               <Stat label={t("statLife")} value={Math.round(derived.lifeExpectancy) + T(lang, "metrics", "lifeExpectancy", "unit", " v")} />
               <Stat label={t("statHealth")} value={Math.round(derived.healthCov * 100) + " %"} sub={t("statHealthSub")(Math.round(derived.eduCov * 100), Math.round(derived.careCov * 100))} warn={derived.healthCov < 0.7} />
@@ -2636,7 +2636,7 @@ export default function Yhteiskunta() {
                   </div>
                   <div style={{ display: "flex", gap: 16, marginBottom: 14, flexWrap: "wrap" }}>
                     <div><div style={{ fontSize: 11, color: "#93a3ba", textTransform: "uppercase" }}>{t("avgAgeLabel")}</div><div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 22, fontWeight: 700, color: "#e9e2cf" }}>{Math.round(derived.avgAge)}{T(lang, "metrics", "lifeExpectancy", "unit", " v")}</div></div>
-                    <div><div style={{ fontSize: 11, color: "#93a3ba", textTransform: "uppercase" }}>{t("depRatioLabel")}</div><div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 22, fontWeight: 700, color: "#e9e2cf" }}>{Math.round(derived.depRatio)}</div><div style={{ fontSize: 10.5, color: "#93a3ba" }}>{t("depRatioNote")}</div></div>
+                    <div><div style={{ fontSize: 11, color: "#93a3ba", textTransform: "uppercase" }}>{t("depRatioLabel")} <InfoButton title={tietolaatikkoKentta("huoltosuhde", "otsikko", lang)} text={tietolaatikkoKentta("huoltosuhde", "sisalto", lang)} /></div><div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 22, fontWeight: 700, color: "#e9e2cf" }}>{Math.round(derived.depRatio)}</div><div style={{ fontSize: 10.5, color: "#93a3ba" }}>{t("depRatioNote")}</div></div>
                   </div>
                   {[
                     { label: t("pyramidChildren"), n: s.children, color: "#c9a227", role: TRole(lang, s.era, "children", era.roles.children) },
@@ -2665,7 +2665,7 @@ export default function Yhteiskunta() {
               <div style={{ position: "fixed", inset: 0, background: "rgba(6,12,22,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 20, padding: 12 }} onClick={() => setGovOpen(false)}>
                 <div className="modal-panel" style={{ maxWidth: 620, width: "100%", maxHeight: "88vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                    <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, margin: "0 0 10px", color: "#f0e8d2" }}>{t("govModalTitle")}</h2>
+                    <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, margin: "0 0 10px", color: "#f0e8d2" }}>{t("govModalTitle")} <InfoButton title={tietolaatikkoKentta("hallintomuodot_legitimiteetti", "otsikko", lang)} text={tietolaatikkoKentta("hallintomuodot_legitimiteetti", "sisalto", lang)} /></h2>
                     <button onClick={() => setGovOpen(false)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#93a3ba", lineHeight: 1 }}>✕</button>
                   </div>
                   <p style={{ fontSize: 13, color: "#93a3ba", margin: "0 0 12px" }}>{t("govModalIntro")}</p>
@@ -2751,7 +2751,7 @@ export default function Yhteiskunta() {
                     </div>
                   </div>
                   <details style={{ marginTop: 10 }}>
-                    <summary style={{ cursor: "pointer", fontSize: 13, color: "#c9a227", fontWeight: 600 }}>{t("showNumbers")}</summary>
+                    <summary style={{ cursor: "pointer", fontSize: 13, color: "#c9a227", fontWeight: 600 }}>{t("showNumbers")} <InfoButton title={tietolaatikkoKentta("demografinen_siirtyma", "otsikko", lang)} text={tietolaatikkoKentta("demografinen_siirtyma", "sisalto", lang)} /></summary>
                     <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, marginTop: 8 }}>
                       <tbody>
                         {s.report.rows.map(([k, v]) => (
@@ -2866,7 +2866,7 @@ export default function Yhteiskunta() {
                     {key === "edu" && (
                       <div style={{ marginTop: 6, paddingLeft: 4, borderLeft: "2px solid #263a54" }}>
                         <div style={{ fontSize: 12, color: "#93a3ba", marginBottom: 4 }}>
-                          {t("eduModeLabel")} <InfoButton title={tietolaatikkoKentta("opetussuuntaus", "otsikko", lang)} text={tietolaatikkoKentta("opetussuuntaus", "sisalto", lang)} />
+                          {t("eduModeLabel")} <InfoButton title={tietolaatikkoKentta("opetussuuntaus", "otsikko", lang)} text={tietolaatikkoKentta("opetussuuntaus", "sisalto", lang)} /> <InfoButton title={tietolaatikkoKentta("oppivelvollisuus_lukutaito", "otsikko", lang)} text={tietolaatikkoKentta("oppivelvollisuus_lukutaito", "sisalto", lang)} />
                         </div>
                         <ModeSelector modes={EDU_MODES} current={s.eduMode} onSelect={setEduMode} eraIdx={s.era} disabled={!!s.gameOver} table="eduModes" />
                       </div>

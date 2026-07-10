@@ -15,6 +15,7 @@ Kehitteillä `dev`-haarassa, ei vielä julkaistu testaajille.
 - `data/tietolaatikot.js`: 13 olemassa olevaa info-selitettä siirretty koodista dataksi (ei sisältömuutoksia), kaikki `InfoButton`-kutsut lukevat nyt datasta
 - Vite-build-pipeline (D2): `npm run build` tuottaa itsenäisen `dist/`-bundlen (`game/yhteiskunta.jsx` + React + Recharts, ei CDN-riippuvuutta). `game/yhteiskunta.html` (CDN-fallback) säilyy koskemattomana rinnalla. `data/tietolaatikot.mjs` on automaattisesti generoitu ES-moduuliversio Vite-buildia varten (`tools/build-tietolaatikot-esm.js`), synkkatarkistettu CI:ssä (`tools/check-data-sync.js`)
 - 🗂️ Tietopankki-paneeli pelinäkymään: kaikki 26 tietolaatikkoa selattavissa kuudessa välilehdessä (Väestö & terveys, Talous & työ, Yhteiskunta & hallinto, Ympäristö, Koulutus & tiede, Historia & aikakaudet), aikakausiehdon mukaan lukittuna/avattuna, sisältö avautuu klikkauksesta
+- 5 uutta kontekstuaalista ℹ️-nappia (vk1 to, korkean prioriteetin tietolaatikot): huoltosuhde (väestöpyramidi), demografinen siirtymä (kertomusraportin "Näytä luvut"), hallintomuodot & legitimiteetti (hallintomodaali), ruokaturva & nälänhätä (ruokavarasto-tilastossa), oppivelvollisuus & lukutaito (opetussuuntaus-rivillä) — 18/26 tietolaatikkoa nyt myös kontekstuaalisia, loput 8 vain Tietopankissa (tietoinen rajaus, ks. TIETOLAATIKKO_UI_SIJOITTELU.md)
 
 Vite-bundle vahvistettu toimivaksi oikeassa selaimessa (Edge) 10.7. — automatisoitu selainklikkaustestaus ei onnistunut tässä ympäristössä, mutta manuaalinen kokeilu vahvisti build-tuloksen toimivan.
 

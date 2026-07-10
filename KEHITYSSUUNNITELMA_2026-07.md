@@ -64,7 +64,7 @@ Kuukausi on onnistunut, kun kaikki seuraavat toteutuvat:
 | Ma 13.7. | Sisällön eriyttäminen: luodaan `data/tietolaatikot.js` ja siirretään 13 olemassa olevan modaalin sisällöt sinne. Rakenne: id, kategoria, otsikko, sisältö, aikakausiehto, prioriteetti. *(Edellyttää `TIETOLAATIKKO_UI_SIJOITTELU.md`:tä — ks. kohta 0.)* | Datatiedosto + modaalikomponentti lukee datasta |
 | Ti 14.7. | Build-pipeline: Vite-projekti pystyyn, JSX + Recharts bundlataan. Poistetaan selain-Babel ja CDN-riippuvuudet. `npm run build` → yksi jaettava kansio/tiedosto. | Staattinen bundle, joka toimii offline |
 | Ke 15.7. | Välilehtisysteemi tietolaatikoille (6 kategoriaa) UI-suunnitelman (`TIETOLAATIKKO_UI_SIJOITTELU.md`) mukaan. Info-kuvakkeet (ℹ️) pelinäkymään kontekstuaalisiin kohtiin. | Navigoitava tietolaatikkopaneeli |
-| To 16.7. | 5 uutta korkean prioriteetin tietolaatikkoa sisään (yksi per keskeinen kategoria) `TIETOLAATIKKO_SISALLOT.md`:stä. | 18/26 laatikkoa pelissä |
+| To 16.7. **(valmis 10.7.)** | 5 uutta korkean prioriteetin tietolaatikkoa sisään (yksi per keskeinen kategoria) `TIETOLAATIKKO_SISALLOT.md`:stä. | 18/26 laatikkoa pelissä ✅ |
 | Pe 17.7. | ~~GitHub Actions: workflow joka ajaa syntaksitarkistuksen~~ **(syntaksitarkistus jo pystyssä 9.7. lähtien)** — lisätään jsdom-savutestit itse pelille CI:hen. Viikon commit + zip-toimitus. | CI vihreänä (syntaksi + savutestit); testipaketti valmiina viikon 2 pelitestaukseen |
 
 **Viikon riski:** Vite-migraatio voi paljastaa yllätyksiä (esim. Recharts-importit, window.storage-polyfill). Varaus: torstain tehtävä joustaa perjantaille tarvittaessa.
