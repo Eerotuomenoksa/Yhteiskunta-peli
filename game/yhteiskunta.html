@@ -1008,6 +1008,14 @@ const UI_STRINGS = {
     tietopankkiModalTitle: "🗂️ Tietopankki",
     tietopankkiModalIntro: "Kaikki pelin tietolaatikot koottuna kuuteen aiheeseen. Osa avautuu vasta myöhemmillä aikakausilla.",
     tietopankkiLocked: (era) => `🔒 Avautuu aikakaudella: ${era}`,
+    saveCodeBtn: "💾 Tallennuskoodi ▸",
+    saveCodeModalTitle: "💾 Tallennuskoodi",
+    saveCodeModalIntro: "Kopioi tämä koodi talteen. Liitä se toisella koneella tai myöhemmin aloitusruudun tuontikenttään jatkaaksesi täsmälleen samasta kohdasta.",
+    importSectionTitle: "…vai jatka tallennettua peliä?",
+    importSectionHint: "Liitä aiemmin kopioitu tallennuskoodi tähän jatkaaksesi kesken jäänyttä yhteisöä.",
+    importPlaceholder: "Liitä tallennuskoodi tähän…",
+    importBtn: "Jatka tallennuskoodilla ▸",
+    importErrorMsg: "Tallennuskoodi ei kelpaa. Tarkista, että kopioit sen kokonaan.",
     historyModalTitle: (village) => village ? `📖 ${village}n historia` : "📖 Yhteisöni historia",
     historyModalIntro: "Tämä näkymä kokoaa yhteisösi koko tarinan — hyvä pohja esitellä muille, mitä valintoja teit ja miksi.",
     startSkillsLabel: (list) => `Aloitustaidot: ${list}`,
@@ -1153,6 +1161,14 @@ const UI_STRINGS = {
     tietopankkiModalTitle: "🗂️ Knowledge base",
     tietopankkiModalIntro: "All the game's info boxes gathered into six topics. Some unlock only in later eras.",
     tietopankkiLocked: (era) => `🔒 Unlocks in the ${era} era`,
+    saveCodeBtn: "💾 Save code ▸",
+    saveCodeModalTitle: "💾 Save code",
+    saveCodeModalIntro: "Copy this code somewhere safe. Paste it into the import field on the start screen — on this or another computer — to continue from exactly this point.",
+    importSectionTitle: "…or continue a saved game?",
+    importSectionHint: "Paste a previously copied save code here to continue an unfinished community.",
+    importPlaceholder: "Paste your save code here…",
+    importBtn: "Continue with save code ▸",
+    importErrorMsg: "That save code isn't valid. Check that you copied all of it.",
     historyModalTitle: (village) => village ? `📖 History of ${village}` : "📖 My community's history",
     historyModalIntro: "This view gathers your community's whole story — a good basis for presenting to others what choices you made and why.",
     startSkillsLabel: (list) => `Starting skills: ${list}`,
@@ -1298,6 +1314,14 @@ const UI_STRINGS = {
     tietopankkiModalTitle: "🗂️ Videnbank",
     tietopankkiModalIntro: "Alle spillets infobokse samlet i seks emner. Nogle låses først op i senere tidsaldre.",
     tietopankkiLocked: (era) => `🔒 Låses op i ${era}tidsalderen`,
+    saveCodeBtn: "💾 Gemmekode ▸",
+    saveCodeModalTitle: "💾 Gemmekode",
+    saveCodeModalIntro: "Kopiér denne kode og gem den. Indsæt den i importfeltet på startskærmen — på denne eller en anden computer — for at fortsætte præcis derfra.",
+    importSectionTitle: "…eller fortsæt et gemt spil?",
+    importSectionHint: "Indsæt en tidligere kopieret gemmekode her for at fortsætte et ufærdigt samfund.",
+    importPlaceholder: "Indsæt din gemmekode her…",
+    importBtn: "Fortsæt med gemmekode ▸",
+    importErrorMsg: "Denne gemmekode er ikke gyldig. Tjek, at du har kopieret den hele.",
     historyModalTitle: (village) => village ? `📖 ${village}s historie` : "📖 Mit samfunds historie",
     historyModalIntro: "Denne visning samler hele dit samfunds historie — et godt grundlag for at præsentere for andre, hvilke valg du traf og hvorfor.",
     startSkillsLabel: (list) => `Startfærdigheder: ${list}`,
@@ -1628,6 +1652,23 @@ const makeStart = (civ, villageName, startSkills, lang = "fi") => {
 
 const fmt = (n) => Math.round(n).toLocaleString("fi-FI");
 
+// Tallennuskoodi: pelitila JSON:na -> UTF-8-tavut -> base64 (ja takaisin). TextEncoder/TextDecoder
+// tarvitaan koska pelitila voi sisältää suomen/tanskan kirjaimia (ä, ö, æ, ø).
+function encodeSaveCode(stateObj) {
+  const json = JSON.stringify(stateObj);
+  const bytes = new TextEncoder().encode(json);
+  let binary = "";
+  bytes.forEach((b) => { binary += String.fromCharCode(b); });
+  return btoa(binary);
+}
+function decodeSaveCode(code) {
+  const binary = atob(code.trim());
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  const json = new TextDecoder().decode(bytes);
+  return JSON.parse(json);
+}
+
 // Yhdistää METRICS-taulukon avaimet data/tietolaatikot.js:n tietolaatikko-id:hin (ks. TIETOLAATIKKO_SISALLOT.md)
 const METRIC_ID_MAP = { lifeExpectancy: "elinajanodote", employmentRate: "tyollisyysaste", pollution: "saasteindeksi", gdpPerCapita: "bkt_per_asukas", crimeRate: "rikollisuusaste", happiness: "onnellisuusindeksi" };
 
@@ -1762,6 +1803,11 @@ function Yhteiskunta() {
   const [tietopankkiItem, setTietopankkiItem] = useState(null);
   const [studentNotes, setStudentNotes] = useState("");
   const [copyDone, setCopyDone] = useState(false);
+  // ---- Tallennuskoodi: pelitilan vienti/tuonti koodina ----
+  const [saveCodeOpen, setSaveCodeOpen] = useState(false);
+  const [saveCopyDone, setSaveCopyDone] = useState(false);
+  const [importCode, setImportCode] = useState("");
+  const [importError, setImportError] = useState("");
   // ---- Kokoontaitettavat osiot (mobiiliystävällisyys) ----
   const [allocOpen, setAllocOpen] = useState(true);
   const [profOpen, setProfOpen] = useState(false);
@@ -2358,6 +2404,37 @@ function Yhteiskunta() {
             <p style={{ textAlign: "center", fontSize: 12, color: "#93a3ba", marginTop: 14 }}>
               {t("civFootnote")}
             </p>
+
+            <div className="paper" style={{ maxWidth: 480, margin: "20px auto 0" }}>
+              <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 16, fontWeight: 700, color: "#f0e8d2", marginBottom: 6 }}>{t("importSectionTitle")}</div>
+              <p style={{ fontSize: 12, color: "#93a3ba", margin: "0 0 8px" }}>{t("importSectionHint")}</p>
+              <textarea
+                value={importCode}
+                onChange={(e) => { setImportCode(e.target.value); setImportError(""); }}
+                placeholder={t("importPlaceholder")}
+                rows={3}
+                style={{ width: "100%", fontFamily: "'IBM Plex Mono',monospace", fontSize: 11, color: "#e9e2cf", border: "1.5px solid #263a54", borderRadius: 8, background: "#0d1c30", padding: 8, boxSizing: "border-box", marginBottom: 8 }}
+              />
+              {importError && <p style={{ color: "#c96a5a", fontSize: 12, margin: "0 0 8px" }}>{importError}</p>}
+              <div style={{ textAlign: "center" }}>
+                <button
+                  className="btn"
+                  style={{ padding: "8px 18px", fontSize: 13 }}
+                  disabled={!importCode.trim()}
+                  onClick={() => {
+                    try {
+                      const parsed = decodeSaveCode(importCode);
+                      if (!parsed || !parsed.civ || !parsed.civ.key) throw new Error("invalid");
+                      setS(parsed);
+                    } catch (e) {
+                      setImportError(t("importErrorMsg"));
+                    }
+                  }}
+                >
+                  {t("importBtn")}
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
@@ -2450,6 +2527,9 @@ function Yhteiskunta() {
               </button>
               <button onClick={() => setTietopankkiOpen(true)} className="info-pill">
                 {t("tietopankkiBtn")}
+              </button>
+              <button onClick={() => setSaveCodeOpen(true)} className="info-pill">
+                {t("saveCodeBtn")}
               </button>
             </div>
 
@@ -2672,6 +2752,55 @@ function Yhteiskunta() {
                   <div style={{ textAlign: "center", display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
                     <button className="btn" style={{ padding: "10px 18px", fontSize: 14 }} onClick={copySummary}>{copyDone ? t("copiedBtn") : t("copyBtn")}</button>
                     <button className="btn" style={{ padding: "10px 18px", fontSize: 14 }} onClick={() => setHistoryOpen(false)}>{t("closeBtn")}</button>
+                  </div>
+                </div>
+              </div>
+              ); })()}
+
+            {saveCodeOpen && (() => {
+              const code = encodeSaveCode(s);
+              const showSaveCopied = () => {
+                setSaveCopyDone(true);
+                setTimeout(() => setSaveCopyDone(false), 2000);
+              };
+              const fallbackSaveCopy = () => {
+                try {
+                  const ta = document.createElement("textarea");
+                  ta.value = code;
+                  ta.style.position = "fixed";
+                  ta.style.opacity = "0";
+                  document.body.appendChild(ta);
+                  ta.focus();
+                  ta.select();
+                  const ok = document.execCommand("copy");
+                  document.body.removeChild(ta);
+                  if (ok) showSaveCopied();
+                } catch (e) {}
+              };
+              const copySaveCode = () => {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                  navigator.clipboard.writeText(code).then(showSaveCopied).catch(fallbackSaveCopy);
+                } else {
+                  fallbackSaveCopy();
+                }
+              };
+              return (
+              <div style={{ position: "fixed", inset: 0, background: "rgba(6,12,22,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 20, padding: 12 }} onClick={() => setSaveCodeOpen(false)}>
+                <div className="modal-panel" style={{ maxWidth: 560, width: "100%", maxHeight: "88vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                    <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, margin: "0 0 6px", color: "#f0e8d2" }}>{t("saveCodeModalTitle")}</h2>
+                    <button onClick={() => setSaveCodeOpen(false)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#93a3ba", lineHeight: 1 }}>✕</button>
+                  </div>
+                  <p style={{ fontSize: 13, color: "#93a3ba", margin: "0 0 12px" }}>{t("saveCodeModalIntro")}</p>
+                  <textarea
+                    readOnly
+                    value={code}
+                    onClick={(e) => e.target.select()}
+                    rows={6}
+                    style={{ width: "100%", fontFamily: "'IBM Plex Mono',monospace", fontSize: 11, color: "#cfd6de", border: "1px solid #2a3d57", borderRadius: 6, background: "#0d1c30", padding: 8, boxSizing: "border-box" }}
+                  />
+                  <div style={{ textAlign: "center", marginTop: 12 }}>
+                    <button className="btn" style={{ padding: "10px 18px", fontSize: 14 }} onClick={copySaveCode}>{saveCopyDone ? t("copiedBtn") : t("copyBtn")}</button>
                   </div>
                 </div>
               </div>
