@@ -1628,6 +1628,32 @@ function decodeSaveCode(code) {
 // Yhdistää METRICS-taulukon avaimet data/tietolaatikot.js:n tietolaatikko-id:hin (ks. TIETOLAATIKKO_SISALLOT.md)
 const METRIC_ID_MAP = { lifeExpectancy: "elinajanodote", employmentRate: "tyollisyysaste", pollution: "saasteindeksi", gdpPerCapita: "bkt_per_asukas", crimeRate: "rikollisuusaste", happiness: "onnellisuusindeksi" };
 
+// Moduulitasolla (ei komponentin sisällä), jotta React tunnistaa saman komponenttityypin joka renderöinnillä
+// eikä pura/rakenna koko sisältöä (ja siten fokusta) uudelleen jokaisen tilanpäivityksen yhteydessä —
+// tämä olisi rikkonut näppäimistöllä säätämisen (esim. liukusäätimen nuolinäppäimet menettäisivät fokuksen).
+function Section({ title, open, onToggle, children, right }) {
+  return (
+    <div>
+      <div
+        className="section-head"
+        onClick={onToggle}
+        role="button"
+        tabIndex={0}
+        aria-expanded={open}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onToggle(); } }}
+        style={{ borderBottom: "1px solid #c9a22755", paddingBottom: 6, marginBottom: 12 }}
+      >
+        <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, fontWeight: 700, margin: 0, color: "#f0e8d2" }}>{title}</h2>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          {right}
+          <span className="chevron" style={{ transform: open ? "rotate(90deg)" : "rotate(0deg)" }}>▶</span>
+        </div>
+      </div>
+      {open && <div>{children}</div>}
+    </div>
+  );
+}
+
 export default function Yhteiskunta() {
   const [s, setS] = useState(makeStart(null));
   // ---- Aloitusnäkymä: sivilisaation valinta -> kylän nimeäminen ja aloitustaitojen valinta ----
@@ -2255,6 +2281,56 @@ export default function Yhteiskunta() {
 
   const foodBalance = derived.foodProd - derived.foodNeed;
 
+  // ---- Saavutettavuus: modaalien fokusloukku + Esc-sulkeminen yhdessä paikassa, jottei logiikkaa toisteta
+  // jokaisessa yhdeksässä modaalissa erikseen. Vain yksi modaali on kerrallaan auki tässä pelissä.
+  const modalPanelRef = useRef(null);
+  const activeModalClose = infoModal ? () => setInfoModal(null)
+    : govOpen ? () => setGovOpen(false)
+    : nationOpen ? () => setNationOpen(false)
+    : metricsOpen ? () => setMetricsOpen(false)
+    : historyOpen ? () => setHistoryOpen(false)
+    : tietopankkiOpen ? () => { setTietopankkiOpen(false); setTietopankkiItem(null); }
+    : saveCodeOpen ? () => setSaveCodeOpen(false)
+    : pyramidOpen ? () => setPyramidOpen(false)
+    : reportOpen ? () => setReportOpen(false)
+    : null;
+  const modalIsOpen = !!activeModalClose || !!s.gameOver;
+  const focusableSelector = 'a[href],button:not([disabled]),textarea,input,select,[tabindex]:not([tabindex="-1"])';
+  useEffect(() => {
+    if (!modalIsOpen) return;
+    const previouslyFocused = document.activeElement;
+    const panel = modalPanelRef.current;
+    const focusFirst = () => {
+      const list = panel ? panel.querySelectorAll(focusableSelector) : [];
+      (list[0] || panel)?.focus();
+    };
+    focusFirst();
+    const onKeyDown = (e) => {
+      if (e.key === "Escape" && activeModalClose) { activeModalClose(); return; }
+      if (e.key !== "Tab" || !panel) return;
+      const list = [...panel.querySelectorAll(focusableSelector)];
+      if (!list.length) return;
+      const first = list[0], last = list[list.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      if (previouslyFocused && previouslyFocused.focus) previouslyFocused.focus();
+    };
+  }, [modalIsOpen, activeModalClose]);
+  // Nuolinäppäimillä säädettävä "liukusäädin" (visuaalinen palkki + askelnapit) — samat säännöt kaikille kuudelle
+  const sliderKeyHandler = (value, setValue, { min = 0, max = 100, small = 1, large = 5 } = {}) => (e) => {
+    if (s.gameOver) return;
+    if (e.key === "ArrowRight" || e.key === "ArrowUp") { e.preventDefault(); setValue(Math.min(max, value + small)); }
+    else if (e.key === "ArrowLeft" || e.key === "ArrowDown") { e.preventDefault(); setValue(Math.max(min, value - small)); }
+    else if (e.key === "PageUp") { e.preventDefault(); setValue(Math.min(max, value + large)); }
+    else if (e.key === "PageDown") { e.preventDefault(); setValue(Math.max(min, value - large)); }
+    else if (e.key === "Home") { e.preventDefault(); setValue(min); }
+    else if (e.key === "End") { e.preventDefault(); setValue(max); }
+  };
+
   const Stat = ({ label, value, sub, warn, info }) => (
     <div style={{ background: "#12233a", padding: "10px 14px", minWidth: 0 }}>
       <div style={{ fontSize: 10.5, textTransform: "uppercase", letterSpacing: 1.5, color: "#93a3ba", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{label}{info && <InfoButton title={info.title} text={info.text} />}</div>
@@ -2266,19 +2342,6 @@ export default function Yhteiskunta() {
   // Pieni "ℹ️" -painike joka avaa selittävän tekstin omaan modaliin, jotta pääruutu pysyy siistinä
   const InfoButton = ({ title, text }) => (
     <button className="info-btn" onClick={() => { setInfoModal({ title, text }); logEvent("info_open", { title }); }} aria-label={t("infoBtnAria")}>ℹ️</button>
-  );
-
-  const Section = ({ title, open, onToggle, children, right }) => (
-    <div>
-      <div className="section-head" onClick={onToggle} style={{ borderBottom: "1px solid #c9a22755", paddingBottom: 6, marginBottom: 12 }}>
-        <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, fontWeight: 700, margin: 0, color: "#f0e8d2" }}>{title}</h2>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          {right}
-          <span className="chevron" style={{ transform: open ? "rotate(90deg)" : "rotate(0deg)" }}>▶</span>
-        </div>
-      </div>
-      {open && <div>{children}</div>}
-    </div>
   );
 
   // Pieni valintarivi laadullisille suuntauksille (maatalous, opetus) — ei liukuva osuus vaan valinta yhdestä vaihtoehdosta
@@ -2349,6 +2412,8 @@ export default function Yhteiskunta() {
         @media (max-width:400px){
           .btn{padding:12px 18px;font-size:16px}
         }
+        button:focus-visible,.civcard:focus-visible,.section-head:focus-visible,.slider-bar:focus-visible,.tp-item:focus-visible,[tabindex]:focus-visible{outline:2px solid #c9a227;outline-offset:2px}
+        .modal-panel:focus{outline:none}
       `}</style>
 
       <div style={{ maxWidth: 980, margin: "0 auto" }}>
@@ -2541,10 +2606,10 @@ export default function Yhteiskunta() {
 
             {nationOpen && (
               <div style={{ position: "fixed", inset: 0, background: "rgba(6,12,22,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 20, padding: 12 }} onClick={() => setNationOpen(false)}>
-                <div className="modal-panel" style={{ maxWidth: 620, width: "100%", maxHeight: "88vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+                <div className="modal-panel" ref={modalPanelRef} tabIndex={-1} role="dialog" aria-modal="true" style={{ maxWidth: 620, width: "100%", maxHeight: "88vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                     <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, margin: "0 0 6px", color: "#f0e8d2" }}>{t("nationModalTitle")}</h2>
-                    <button onClick={() => setNationOpen(false)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#93a3ba", lineHeight: 1 }}>✕</button>
+                    <button onClick={() => setNationOpen(false)} aria-label={t("closeBtn")} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#93a3ba", lineHeight: 1 }}>✕</button>
                   </div>
                   <p style={{ fontSize: 13, color: "#93a3ba", margin: "0 0 12px" }}>{t("nationModalIntro")(`${s.civ.icon} ${tc("civs", s.civ.key, "name", s.civ.name)}`)}</p>
                   {NATION_BRANCHES[s.civ.key].map((n) => {
@@ -2572,10 +2637,10 @@ export default function Yhteiskunta() {
 
             {metricsOpen && (
               <div style={{ position: "fixed", inset: 0, background: "rgba(6,12,22,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 20, padding: 12 }} onClick={() => setMetricsOpen(false)}>
-                <div className="modal-panel" style={{ maxWidth: 560, width: "100%", maxHeight: "88vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+                <div className="modal-panel" ref={modalPanelRef} tabIndex={-1} role="dialog" aria-modal="true" style={{ maxWidth: 560, width: "100%", maxHeight: "88vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                     <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, margin: "0 0 6px", color: "#f0e8d2" }}>{t("metricsModalTitle")}</h2>
-                    <button onClick={() => setMetricsOpen(false)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#93a3ba", lineHeight: 1 }}>✕</button>
+                    <button onClick={() => setMetricsOpen(false)} aria-label={t("closeBtn")} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#93a3ba", lineHeight: 1 }}>✕</button>
                   </div>
                   <p style={{ fontSize: 13, color: "#93a3ba", margin: "0 0 12px" }}>{t("metricsModalIntro")}</p>
                   {METRICS.map((m) => {
@@ -2603,10 +2668,10 @@ export default function Yhteiskunta() {
 
             {tietopankkiOpen && (
               <div style={{ position: "fixed", inset: 0, background: "rgba(6,12,22,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 20, padding: 12 }} onClick={() => { setTietopankkiOpen(false); setTietopankkiItem(null); }}>
-                <div className="modal-panel" style={{ maxWidth: 620, width: "100%", maxHeight: "88vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+                <div className="modal-panel" ref={modalPanelRef} tabIndex={-1} role="dialog" aria-modal="true" style={{ maxWidth: 620, width: "100%", maxHeight: "88vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                     <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, margin: "0 0 6px", color: "#f0e8d2" }}>{t("tietopankkiModalTitle")}</h2>
-                    <button onClick={() => { setTietopankkiOpen(false); setTietopankkiItem(null); }} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#93a3ba", lineHeight: 1 }}>✕</button>
+                    <button onClick={() => { setTietopankkiOpen(false); setTietopankkiItem(null); }} aria-label={t("closeBtn")} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#93a3ba", lineHeight: 1 }}>✕</button>
                   </div>
                   <p style={{ fontSize: 13, color: "#93a3ba", margin: "0 0 12px" }}>{t("tietopankkiModalIntro")}</p>
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
@@ -2627,8 +2692,14 @@ export default function Yhteiskunta() {
                     return (
                       <div key={item.id} style={{ padding: "8px 4px", borderBottom: "1px dotted #263a54" }}>
                         <div
+                          className="tp-item"
+                          role="button"
+                          tabIndex={unlocked ? 0 : -1}
+                          aria-expanded={unlocked ? isOpen : undefined}
+                          aria-disabled={!unlocked}
                           style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: unlocked ? "pointer" : "default" }}
                           onClick={() => { if (!unlocked) return; const opening = !isOpen; setTietopankkiItem(opening ? item.id : null); if (opening) logEvent("info_open", { title: tietolaatikkoKentta(item.id, "otsikko", lang) }); }}
+                          onKeyDown={(e) => { if (!unlocked) return; if (e.key === "Enter" || e.key === " ") { e.preventDefault(); const opening = !isOpen; setTietopankkiItem(opening ? item.id : null); if (opening) logEvent("info_open", { title: tietolaatikkoKentta(item.id, "otsikko", lang) }); } }}
                         >
                           <span style={{ fontSize: 14, color: unlocked ? "#cfd6de" : "#728098" }}>
                             {tietolaatikkoKentta(item.id, "otsikko", lang)}
@@ -2698,10 +2769,10 @@ export default function Yhteiskunta() {
 
               return (
               <div style={{ position: "fixed", inset: 0, background: "rgba(6,12,22,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 20, padding: 12 }} onClick={() => setHistoryOpen(false)}>
-                <div className="modal-panel" style={{ maxWidth: 640, width: "100%", maxHeight: "90vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+                <div className="modal-panel" ref={modalPanelRef} tabIndex={-1} role="dialog" aria-modal="true" style={{ maxWidth: 640, width: "100%", maxHeight: "90vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                     <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, margin: "0 0 6px", color: "#f0e8d2" }}>{t("historyModalTitle")(s.villageName)}</h2>
-                    <button onClick={() => setHistoryOpen(false)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#93a3ba", lineHeight: 1 }}>✕</button>
+                    <button onClick={() => setHistoryOpen(false)} aria-label={t("closeBtn")} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#93a3ba", lineHeight: 1 }}>✕</button>
                   </div>
                   <p style={{ fontSize: 12.5, color: "#93a3ba", margin: "0 0 12px" }}>{t("historyModalIntro")}</p>
 
@@ -2793,10 +2864,10 @@ export default function Yhteiskunta() {
               };
               return (
               <div style={{ position: "fixed", inset: 0, background: "rgba(6,12,22,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 20, padding: 12 }} onClick={() => setSaveCodeOpen(false)}>
-                <div className="modal-panel" style={{ maxWidth: 560, width: "100%", maxHeight: "88vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+                <div className="modal-panel" ref={modalPanelRef} tabIndex={-1} role="dialog" aria-modal="true" style={{ maxWidth: 560, width: "100%", maxHeight: "88vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                     <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, margin: "0 0 6px", color: "#f0e8d2" }}>{t("saveCodeModalTitle")}</h2>
-                    <button onClick={() => setSaveCodeOpen(false)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#93a3ba", lineHeight: 1 }}>✕</button>
+                    <button onClick={() => setSaveCodeOpen(false)} aria-label={t("closeBtn")} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#93a3ba", lineHeight: 1 }}>✕</button>
                   </div>
                   <p style={{ fontSize: 13, color: "#93a3ba", margin: "0 0 12px" }}>{t("saveCodeModalIntro")}</p>
                   <textarea
@@ -2815,10 +2886,10 @@ export default function Yhteiskunta() {
 
             {pyramidOpen && (
               <div style={{ position: "fixed", inset: 0, background: "rgba(6,12,22,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 20, padding: 12 }} onClick={() => setPyramidOpen(false)}>
-                <div className="modal-panel" style={{ maxWidth: 560, width: "100%", maxHeight: "88vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+                <div className="modal-panel" ref={modalPanelRef} tabIndex={-1} role="dialog" aria-modal="true" style={{ maxWidth: 560, width: "100%", maxHeight: "88vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                     <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, margin: "0 0 10px", color: "#f0e8d2" }}>{t("pyramidModalTitle")}</h2>
-                    <button onClick={() => setPyramidOpen(false)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#93a3ba", lineHeight: 1 }}>✕</button>
+                    <button onClick={() => setPyramidOpen(false)} aria-label={t("closeBtn")} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#93a3ba", lineHeight: 1 }}>✕</button>
                   </div>
                   <div style={{ display: "flex", gap: 16, marginBottom: 14, flexWrap: "wrap" }}>
                     <div><div style={{ fontSize: 11, color: "#93a3ba", textTransform: "uppercase" }}>{t("avgAgeLabel")}</div><div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 22, fontWeight: 700, color: "#e9e2cf" }}>{Math.round(derived.avgAge)}{T(lang, "metrics", "lifeExpectancy", "unit", " v")}</div></div>
@@ -2849,10 +2920,10 @@ export default function Yhteiskunta() {
 
             {govOpen && (
               <div style={{ position: "fixed", inset: 0, background: "rgba(6,12,22,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 20, padding: 12 }} onClick={() => setGovOpen(false)}>
-                <div className="modal-panel" style={{ maxWidth: 620, width: "100%", maxHeight: "88vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+                <div className="modal-panel" ref={modalPanelRef} tabIndex={-1} role="dialog" aria-modal="true" style={{ maxWidth: 620, width: "100%", maxHeight: "88vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                     <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, margin: "0 0 10px", color: "#f0e8d2" }}>{t("govModalTitle")} <InfoButton title={tietolaatikkoKentta("hallintomuodot_legitimiteetti", "otsikko", lang)} text={tietolaatikkoKentta("hallintomuodot_legitimiteetti", "sisalto", lang)} /></h2>
-                    <button onClick={() => setGovOpen(false)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#93a3ba", lineHeight: 1 }}>✕</button>
+                    <button onClick={() => setGovOpen(false)} aria-label={t("closeBtn")} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#93a3ba", lineHeight: 1 }}>✕</button>
                   </div>
                   <p style={{ fontSize: 13, color: "#93a3ba", margin: "0 0 12px" }}>{t("govModalIntro")}</p>
                   {GOVERNMENTS.map((g) => {
@@ -2905,10 +2976,10 @@ export default function Yhteiskunta() {
 
             {reportOpen && s.report && (
               <div style={{ position: "fixed", inset: 0, background: "rgba(6,12,22,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 20, padding: 12 }} onClick={() => setReportOpen(false)}>
-                <div className="modal-panel" style={{ maxWidth: 640, width: "100%", maxHeight: "88vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+                <div className="modal-panel" ref={modalPanelRef} tabIndex={-1} role="dialog" aria-modal="true" style={{ maxWidth: 640, width: "100%", maxHeight: "88vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                     <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, margin: "0 0 10px", color: "#f0e8d2" }}>{t("reportPreview")(s.report.period)}</h2>
-                    <button onClick={() => setReportOpen(false)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#93a3ba", lineHeight: 1 }}>✕</button>
+                    <button onClick={() => setReportOpen(false)} aria-label={t("closeBtn")} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#93a3ba", lineHeight: 1 }}>✕</button>
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(260px,1fr))", gap: 16, alignItems: "start" }}>
                     <div>
@@ -2969,7 +3040,18 @@ export default function Yhteiskunta() {
                     <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                       <button className="step" onClick={() => setAlloc(key, alloc[key] - 5)} disabled={!!s.gameOver || alloc[key] <= 0}>−5</button>
                       <button className="step" onClick={() => setAlloc(key, alloc[key] - 1)} disabled={!!s.gameOver || alloc[key] <= 0}>−1</button>
-                      <div style={{ flex: 1, height: 8, background: "#1c3049", borderRadius: 4, overflow: "hidden" }}>
+                      <div
+                        className="slider-bar"
+                        role="slider"
+                        aria-label={tc("sectors", key, "name", name)}
+                        aria-valuenow={alloc[key]}
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                        aria-valuetext={`${alloc[key]} %`}
+                        tabIndex={s.gameOver ? -1 : 0}
+                        onKeyDown={sliderKeyHandler(alloc[key], (v) => setAlloc(key, v))}
+                        style={{ flex: 1, height: 8, background: "#1c3049", borderRadius: 4, overflow: "hidden" }}
+                      >
                         <div style={{ width: `${alloc[key]}%`, height: "100%", background: alloc[key] === maxAllocVal ? "linear-gradient(90deg,#a3822a,#c9a227)" : "#c9a227", transition: "width .3s ease" }} />
                       </div>
                       <button className="step" onClick={() => setAlloc(key, alloc[key] + 1)} disabled={!!s.gameOver || alloc[key] >= 100}>+1</button>
@@ -2995,7 +3077,7 @@ export default function Yhteiskunta() {
                             </div>
                             <div style={{ display: "flex", gap: 5, alignItems: "center", marginBottom: 6 }}>
                               <button className="step" style={{ minWidth: 34, height: 32, fontSize: 13 }} onClick={() => setHealthFocus(s.healthFocus - 10)} disabled={!!s.gameOver || s.healthFocus <= 0}>−10</button>
-                              <div style={{ flex: 1, height: 8, background: "#1c3049", borderRadius: 4, overflow: "hidden" }}>
+                              <div className="slider-bar" role="slider" aria-label={t("healthFocusLabel")} aria-valuenow={s.healthFocus} aria-valuemin={0} aria-valuemax={100} aria-valuetext={`${s.healthFocus} %`} tabIndex={s.gameOver ? -1 : 0} onKeyDown={sliderKeyHandler(s.healthFocus, setHealthFocus, { small: 10, large: 20 })} style={{ flex: 1, height: 8, background: "#1c3049", borderRadius: 4, overflow: "hidden" }}>
                                 <div style={{ width: `${s.healthFocus}%`, height: "100%", background: "linear-gradient(90deg,#a3822a,#c9a227)" }} />
                               </div>
                               <button className="step" style={{ minWidth: 34, height: 32, fontSize: 13 }} onClick={() => setHealthFocus(s.healthFocus + 10)} disabled={!!s.gameOver || s.healthFocus >= 100}>+10</button>
@@ -3009,7 +3091,7 @@ export default function Yhteiskunta() {
                                 </div>
                                 <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
                                   <button className="step" style={{ minWidth: 34, height: 32, fontSize: 13 }} onClick={() => setSpecialistShare(s.specialistShare - 10)} disabled={!!s.gameOver || s.specialistShare <= 0}>−10</button>
-                                  <div style={{ flex: 1, height: 8, background: "#1c3049", borderRadius: 4, overflow: "hidden" }}>
+                                  <div className="slider-bar" role="slider" aria-label={t("specialistLabel")} aria-valuenow={s.specialistShare} aria-valuemin={0} aria-valuemax={100} aria-valuetext={`${s.specialistShare} %`} tabIndex={s.gameOver ? -1 : 0} onKeyDown={sliderKeyHandler(s.specialistShare, setSpecialistShare, { small: 10, large: 20 })} style={{ flex: 1, height: 8, background: "#1c3049", borderRadius: 4, overflow: "hidden" }}>
                                     <div style={{ width: `${s.specialistShare}%`, height: "100%", background: "linear-gradient(90deg,#a3822a,#c9a227)" }} />
                                   </div>
                                   <button className="step" style={{ minWidth: 34, height: 32, fontSize: 13 }} onClick={() => setSpecialistShare(s.specialistShare + 10)} disabled={!!s.gameOver || s.specialistShare >= 100}>+10</button>
@@ -3036,7 +3118,7 @@ export default function Yhteiskunta() {
                             </div>
                             <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
                               <button className="step" style={{ minWidth: 34, height: 32, fontSize: 13 }} onClick={() => setAppliedShare(s.appliedShare - 10)} disabled={!!s.gameOver || s.appliedShare <= 0}>−10</button>
-                              <div style={{ flex: 1, height: 8, background: "#1c3049", borderRadius: 4, overflow: "hidden" }}>
+                              <div className="slider-bar" role="slider" aria-label={t("appliedLabel")} aria-valuenow={s.appliedShare} aria-valuemin={0} aria-valuemax={100} aria-valuetext={`${s.appliedShare} %`} tabIndex={s.gameOver ? -1 : 0} onKeyDown={sliderKeyHandler(s.appliedShare, setAppliedShare, { small: 10, large: 20 })} style={{ flex: 1, height: 8, background: "#1c3049", borderRadius: 4, overflow: "hidden" }}>
                                 <div style={{ width: `${s.appliedShare}%`, height: "100%", background: "linear-gradient(90deg,#a3822a,#c9a227)" }} />
                               </div>
                               <button className="step" style={{ minWidth: 34, height: 32, fontSize: 13 }} onClick={() => setAppliedShare(s.appliedShare + 10)} disabled={!!s.gameOver || s.appliedShare >= 100}>+10</button>
@@ -3068,7 +3150,7 @@ export default function Yhteiskunta() {
                             </div>
                             <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
                               <button className="step" style={{ minWidth: 34, height: 32, fontSize: 13 }} onClick={() => setDetectiveShare(s.detectiveShare - 10)} disabled={!!s.gameOver || s.detectiveShare <= 0}>−10</button>
-                              <div style={{ flex: 1, height: 8, background: "#1c3049", borderRadius: 4, overflow: "hidden" }}>
+                              <div className="slider-bar" role="slider" aria-label={t("detectiveLabel")} aria-valuenow={s.detectiveShare} aria-valuemin={0} aria-valuemax={100} aria-valuetext={`${s.detectiveShare} %`} tabIndex={s.gameOver ? -1 : 0} onKeyDown={sliderKeyHandler(s.detectiveShare, setDetectiveShare, { small: 10, large: 20 })} style={{ flex: 1, height: 8, background: "#1c3049", borderRadius: 4, overflow: "hidden" }}>
                                 <div style={{ width: `${s.detectiveShare}%`, height: "100%", background: "linear-gradient(90deg,#a3822a,#c9a227)" }} />
                               </div>
                               <button className="step" style={{ minWidth: 34, height: 32, fontSize: 13 }} onClick={() => setDetectiveShare(s.detectiveShare + 10)} disabled={!!s.gameOver || s.detectiveShare >= 100}>+10</button>
@@ -3091,7 +3173,7 @@ export default function Yhteiskunta() {
                             </div>
                             <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
                               <button className="step" style={{ minWidth: 34, height: 32, fontSize: 13 }} onClick={() => setIndustryFocus(s.industryFocus - 10)} disabled={!!s.gameOver || s.industryFocus <= 0}>−10</button>
-                              <div style={{ flex: 1, height: 8, background: "#1c3049", borderRadius: 4, overflow: "hidden" }}>
+                              <div className="slider-bar" role="slider" aria-label={t("industryLabel")} aria-valuenow={s.industryFocus} aria-valuemin={0} aria-valuemax={100} aria-valuetext={`${s.industryFocus} %`} tabIndex={s.gameOver ? -1 : 0} onKeyDown={sliderKeyHandler(s.industryFocus, setIndustryFocus, { small: 10, large: 20 })} style={{ flex: 1, height: 8, background: "#1c3049", borderRadius: 4, overflow: "hidden" }}>
                                 <div style={{ width: `${s.industryFocus}%`, height: "100%", background: "linear-gradient(90deg,#a3822a,#c9a227)" }} />
                               </div>
                               <button className="step" style={{ minWidth: 34, height: 32, fontSize: 13 }} onClick={() => setIndustryFocus(s.industryFocus + 10)} disabled={!!s.gameOver || s.industryFocus >= 100}>+10</button>
@@ -3132,10 +3214,10 @@ export default function Yhteiskunta() {
 
             {infoModal && (
               <div style={{ position: "fixed", inset: 0, background: "rgba(6,12,22,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 25, padding: 12 }} onClick={() => setInfoModal(null)}>
-                <div className="modal-panel" style={{ maxWidth: 460, width: "100%", maxHeight: "80vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+                <div className="modal-panel" ref={modalPanelRef} tabIndex={-1} role="dialog" aria-modal="true" style={{ maxWidth: 460, width: "100%", maxHeight: "80vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                     <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 18, margin: "0 0 8px", color: "#f0e8d2" }}>ℹ️ {infoModal.title}</h2>
-                    <button onClick={() => setInfoModal(null)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#93a3ba", lineHeight: 1 }}>✕</button>
+                    <button onClick={() => setInfoModal(null)} aria-label={t("closeBtn")} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#93a3ba", lineHeight: 1 }}>✕</button>
                   </div>
                   <p style={{ fontSize: 14, lineHeight: 1.6, margin: 0, color: "#cfd6de" }}>{infoModal.text}</p>
                 </div>
@@ -3172,7 +3254,7 @@ export default function Yhteiskunta() {
 
         {s.gameOver && (
           <div style={{ position: "fixed", inset: 0, background: "rgba(6,12,22,0.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 10, padding: 12 }}>
-            <div className="modal-panel" style={{ maxWidth: 480, width: "100%", textAlign: "center", padding: 24, maxHeight: "90vh", overflowY: "auto" }}>
+            <div className="modal-panel" ref={modalPanelRef} tabIndex={-1} role="dialog" aria-modal="true" style={{ maxWidth: 480, width: "100%", textAlign: "center", padding: 24, maxHeight: "90vh", overflowY: "auto" }}>
               <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 28, margin: "0 0 10px", color: s.gameOver.win ? "#7fbf8f" : "#c96a5a" }}>
                 {s.gameOver.win ? t("civilizationWins") : t("civilizationCollapsed")}
               </h2>
