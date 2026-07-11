@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 // data/tietolaatikot.mjs on Vite-buildin käyttämä ES-moduuli, mekaanisesti generoitu
 // data/tietolaatikot.js:stä (tools/build-tietolaatikot-esm.js). Älä muokkaa .mjs:ää suoraan.
@@ -981,6 +981,8 @@ const UI_STRINGS = {
     notesPlaceholder: "Kirjoita tähän ajatuksiasi esittelyä varten...",
     copyBtn: "📋 Kopioi teksti esitystä varten",
     copiedBtn: "✓ Kopioitu!",
+    exportReportBtn: "📊 Vie raportti (opettajalle)",
+    exportReportHint: "Lataa JSON-tiedoston: avatut tietolaatikot, vuorojen määrä, istunnon kesto ja saavutetut aikakaudet. Ei lähetetä minnekään — tallentuu vain tälle laitteelle.",
     closeBtn: "Sulje ✕",
     pyramidModalTitle: "👪 Väestön jakauma",
     avgAgeLabel: "Keski-ikä", depRatioLabel: "Huoltosuhde", depRatioNote: "lasta+vanhusta / 100 työikäistä",
@@ -1134,6 +1136,8 @@ const UI_STRINGS = {
     notesPlaceholder: "Write your thoughts here for the presentation...",
     copyBtn: "📋 Copy text for presentation",
     copiedBtn: "✓ Copied!",
+    exportReportBtn: "📊 Export report (for teacher)",
+    exportReportHint: "Downloads a JSON file: opened info boxes, number of turns, session length and eras reached. Nothing is sent anywhere — it stays on this device.",
     closeBtn: "Close ✕",
     pyramidModalTitle: "👪 Population breakdown",
     avgAgeLabel: "Average age", depRatioLabel: "Dependency ratio", depRatioNote: "children+elderly / 100 working-age",
@@ -1287,6 +1291,8 @@ const UI_STRINGS = {
     notesPlaceholder: "Skriv dine tanker her til præsentationen...",
     copyBtn: "📋 Kopiér tekst til præsentation",
     copiedBtn: "✓ Kopieret!",
+    exportReportBtn: "📊 Eksportér rapport (til læreren)",
+    exportReportHint: "Downloader en JSON-fil: åbnede infobokse, antal runder, sessionens længde og nåede tidsaldre. Der sendes intet nogen steder — det gemmes kun på denne enhed.",
     closeBtn: "Luk ✕",
     pyramidModalTitle: "👪 Befolkningsfordeling",
     avgAgeLabel: "Gennemsnitsalder", depRatioLabel: "Forsørgerbrøk", depRatioNote: "børn+ældre / 100 i den arbejdsdygtige alder",
@@ -1758,6 +1764,56 @@ export default function Yhteiskunta() {
   const [saveCopyDone, setSaveCopyDone] = useState(false);
   const [importCode, setImportCode] = useState("");
   const [importError, setImportError] = useState("");
+  // ---- Telemetria: kevyt paikallinen tapahtumaloki opettajan raporttia varten (ei lähetetä minnekään) ----
+  const [telemetry, setTelemetry] = useState(() => ({ sessionStart: Date.now(), events: [] }));
+  const logEvent = (type, extra) => {
+    setTelemetry((p) => ({ ...p, events: [...p.events, { type, ...extra, t: Date.now() }] }));
+  };
+  const prevYearRef = useRef(null);
+  const prevEraRef = useRef(null);
+  useEffect(() => {
+    if (!s.civ) return;
+    if (prevYearRef.current !== null && s.year !== prevYearRef.current) {
+      logEvent("turn", { year: s.year, era: s.era });
+    }
+    if (prevEraRef.current !== null && s.era !== prevEraRef.current) {
+      logEvent("era_reached", { era: s.era, year: s.year });
+    }
+    prevYearRef.current = s.year;
+    prevEraRef.current = s.era;
+  }, [s.year, s.era, s.civ]);
+
+  function buildTelemetryReport() {
+    const now = Date.now();
+    const infoOpens = telemetry.events.filter((e) => e.type === "info_open");
+    const infoCounts = {};
+    infoOpens.forEach((e) => { infoCounts[e.title] = (infoCounts[e.title] || 0) + 1; });
+    const erasReached = [...new Set(telemetry.events.filter((e) => e.type === "era_reached").map((e) => e.era))];
+    return {
+      generoitu: new Date(now).toISOString(),
+      istunnonKestoMs: now - telemetry.sessionStart,
+      vuorojenMaara: telemetry.events.filter((e) => e.type === "turn").length,
+      aikakausiNyt: s.civ ? s.era : null,
+      aikakaudetSaavutettuIstunnossa: erasReached,
+      avattujaTietolaatikoitaYhteensa: infoOpens.length,
+      uniikkejaTietolaatikoita: Object.keys(infoCounts).length,
+      avatutTietolaatikot: infoCounts,
+      tapahtumat: telemetry.events,
+    };
+  }
+  function exportTelemetryReport() {
+    const report = buildTelemetryReport();
+    const json = JSON.stringify(report, null, 2);
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `yhteiskunta-raportti-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
   // ---- Kokoontaitettavat osiot (mobiiliystävällisyys) ----
   const [allocOpen, setAllocOpen] = useState(true);
   const [profOpen, setProfOpen] = useState(false);
@@ -2209,7 +2265,7 @@ export default function Yhteiskunta() {
 
   // Pieni "ℹ️" -painike joka avaa selittävän tekstin omaan modaliin, jotta pääruutu pysyy siistinä
   const InfoButton = ({ title, text }) => (
-    <button className="info-btn" onClick={() => setInfoModal({ title, text })} aria-label={t("infoBtnAria")}>ℹ️</button>
+    <button className="info-btn" onClick={() => { setInfoModal({ title, text }); logEvent("info_open", { title }); }} aria-label={t("infoBtnAria")}>ℹ️</button>
   );
 
   const Section = ({ title, open, onToggle, children, right }) => (
@@ -2572,7 +2628,7 @@ export default function Yhteiskunta() {
                       <div key={item.id} style={{ padding: "8px 4px", borderBottom: "1px dotted #263a54" }}>
                         <div
                           style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: unlocked ? "pointer" : "default" }}
-                          onClick={() => unlocked && setTietopankkiItem(isOpen ? null : item.id)}
+                          onClick={() => { if (!unlocked) return; const opening = !isOpen; setTietopankkiItem(opening ? item.id : null); if (opening) logEvent("info_open", { title: tietolaatikkoKentta(item.id, "otsikko", lang) }); }}
                         >
                           <span style={{ fontSize: 14, color: unlocked ? "#cfd6de" : "#728098" }}>
                             {tietolaatikkoKentta(item.id, "otsikko", lang)}
@@ -2701,6 +2757,7 @@ export default function Yhteiskunta() {
 
                   <div style={{ textAlign: "center", display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
                     <button className="btn" style={{ padding: "10px 18px", fontSize: 14 }} onClick={copySummary}>{copyDone ? t("copiedBtn") : t("copyBtn")}</button>
+                    <button className="btn" style={{ padding: "10px 18px", fontSize: 14 }} onClick={exportTelemetryReport} title={t("exportReportHint")}>{t("exportReportBtn")}</button>
                     <button className="btn" style={{ padding: "10px 18px", fontSize: 14 }} onClick={() => setHistoryOpen(false)}>{t("closeBtn")}</button>
                   </div>
                 </div>

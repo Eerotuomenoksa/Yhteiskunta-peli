@@ -81,7 +81,7 @@ Kuukausi on onnistunut, kun kaikki seuraavat toteutuvat:
 | Ti 21.7. | **PELITESTAUS 1:** 2–3 nuorta (ikäryhmä 15–18) pelaa 30–45 min. Havainnoi äänettömästi: löytävätkö info-kuvakkeet? Lukevatko laatikot? Mihin jäävät jumiin? Lyhyt haastattelu lopuksi. Kirjaa havainnot myös `testaajat.html`:n kautta GitHub-issueiksi, jotta koko testaajaryhmä näkee tilanteen. | Testimuistio 1 |
 | Ke 22.7. | Testihavaintojen priorisointi ja korjaukset: UI-ongelmat, epäselvät tekstit, kuvakkeiden sijoittelu. | Korjauslista toteutettu |
 | To 23.7. | Loput 8 uutta tietolaatikkoa sisään — muotoiltuna testipalautteen opettamalla tavalla (esim. tekstin pituus, otsikointi). *(Edellyttää `TIETOLAATIKKO_SISALLOT.md`:tä. Huom: kaikki 26 laatikkoa ovat teknisesti jo pelissä ja selattavissa Tietopankki-paneelin kautta 10.7. lähtien — tämän päivän työ on siis lähinnä sisällön hienosäätöä testipalautteen pohjalta, ei enää puuttuvien laatikoiden lisäämistä.)* | 26/26 laatikkoa pelissä (D1) — teknisesti valmis, hienosäätö pelitestauksen jälkeen |
-| Pe 24.7. | Telemetrian runko: paikallinen tapahtumaloki (avatut laatikot, vuorot, sessioaika, saavutettu aikakausi) + "Vie raportti" -nappi opettajanäkymään (JSON/CSV). Viikon commit + zip. | D5 pohja valmis |
+| Pe 24.7. | Telemetrian runko: paikallinen tapahtumaloki (avatut laatikot, vuorot, sessioaika, saavutettu aikakausi) + "Vie raportti" -nappi opettajanäkymään (JSON/CSV). Viikon commit + zip. | **D5 pohja valmis ✅** *(tehty 11.7. — pelitestaus ja korjaukset (ti–ke) yhä tekemättä, ks. alla)* |
 
 **Varasuunnitelma:** Jos nuoria ei saa testaajiksi heinäkuussa (loma-aika), testaa yhdellä aikuisella "naiivilla" pelaajalla ja siirrä nuorten testaus viikolle 3. Älä ohita testausta kokonaan.
 
