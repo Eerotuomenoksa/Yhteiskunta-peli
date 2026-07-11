@@ -28,5 +28,7 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      - name: Esteettömyystarkistus (axe-core + jsdom, D4/D10)
+        run: npm run check-a11y
       - name: Vite-build (game/ -> dist/)
         run: npm run build
