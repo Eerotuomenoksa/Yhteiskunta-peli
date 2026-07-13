@@ -9,7 +9,8 @@ Pelaaja johtaa 10 000 hengen yhteiskuntaa agraariajasta nykyaikaan tehden päät
 ## Tiedostot
 
 - `game/yhteiskunta.jsx` — Reactin lähdekoodi (komponentti), jota **Vite-build** (ks. alla) käyttää
-- `game/yhteiskunta.html` — itsenäinen, suoraan selaimessa toimiva **CDN-fallback-versio** (React, ReactDOM, Recharts ja Babel ladataan CDN:stä; ei vaadi build-vaihetta eikä palvelinta). Avaa tuplaklikkaamalla missä tahansa selaimessa, myös ilman verkkoyhteyttä asennuksen jälkeen paitsi fonttien osalta. Säilyy tarkoituksella koskemattomana varajärjestelmänä siltä varalta että Vite-bundle pettää jossain ympäristössä.
+- `play/` — Vite-buildin **committoitu tuotos**, jonka GitHub Pages tarjoilee osoitteesta `/play/` — tämä on testaajien ensisijainen linkki (ks. `testaajat.html`). Rakennettu `npm run build`:lla, ei muokata käsin. **Muista ajaa `npm run build` ja committoida tulos aina kun `game/yhteiskunta.jsx` tai `data/tietolaatikot.mjs` muuttuu**, muuten julkaistu versio jää jälkeen.
+- `game/yhteiskunta.html` — itsenäinen, suoraan selaimessa toimiva **CDN-fallback-versio** (React, ReactDOM, Recharts ja Babel ladataan CDN:stä; ei vaadi build-vaihetta eikä palvelinta). Avaa tuplaklikkaamalla missä tahansa selaimessa, myös ilman verkkoyhteyttä asennuksen jälkeen paitsi fonttien osalta. Säilyy tarkoituksella koskemattomana varajärjestelmänä niille jotka lataavat pelin koneelleen offline-käyttöön — huomattavasti raskaampi kuin `play/` (ks. KOULUSIMULAATIO.md), joten ei ole enää testaajien ensisijainen linkki.
 - `data/tietolaatikot.js` — pelin tietolaatikoiden (ks. TIETOLAATIKKO_*.md) sisältö, klassinen `<script>`-yhteensopiva muoto — tämä on **muokattava lähdetiedosto**.
 - `data/tietolaatikot.mjs` — sama sisältö ES-moduulina Vite-buildia varten. **Automaattisesti generoitu, älä muokkaa suoraan** — aja `node tools/build-tietolaatikot-esm.js` `.js`-tiedoston muokkauksen jälkeen.
 
@@ -17,12 +18,12 @@ Pelaaja johtaa 10 000 hengen yhteiskuntaa agraariajasta nykyaikaan tehden päät
 
 ```bash
 npm install
-npm run build     # -> dist/ (yksi itsenäinen, jaettava kansio)
+npm run build     # -> play/ (yksi itsenäinen, git-committoitu kansio jonka GitHub Pages tarjoilee)
 npm run dev        # kehityspalvelin hot-reloadilla
-npm run preview    # esikatselee dist/-kansion paikallisesti
+npm run preview    # esikatselee play/-kansion paikallisesti
 ```
 
-`dist/`-kansio on täysin itsenäinen (favicon ja kaikki muu bundlattu mukaan) mutta vaatii `type="module"`-tuen vuoksi HTTP(S)-palvelimen — ei toimi `file://`-protokollalla tuplaklikkaamalla (siihen käyttöön on `game/yhteiskunta.html`).
+`play/`-kansio on täysin itsenäinen (favicon ja kaikki muu bundlattu mukaan) mutta vaatii `type="module"`-tuen vuoksi HTTP(S)-palvelimen — ei toimi `file://`-protokollalla tuplaklikkaamalla (siihen käyttöön on `game/yhteiskunta.html`). Toisin kuin useimmat Vite-projektit, tämä kansio **committoidaan gitiin** (ei ole `.gitignore`ssa) koska GitHub Pages tässä projektissa tarjoilee suoraan `main`-haaran tiedostoja ilman erillistä julkaisuputkea.
 
 ## Ominaisuudet (tiivistetysti)
 
