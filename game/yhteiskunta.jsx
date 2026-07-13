@@ -2376,7 +2376,6 @@ export default function Yhteiskunta() {
   return (
     <div style={{ minHeight: "100vh", background: "linear-gradient(175deg,#101f33 0%,#0c1828 100%)", fontFamily: "'Source Sans 3', sans-serif", color: "#e9e2cf", padding: 16 }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Source+Sans+3:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
         input[type=range]{accent-color:#c9a227;width:100%}
         .btn{background:linear-gradient(180deg,#d4af37,#b8922a);color:#14243a;border:none;padding:13px 28px;font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:700;border-radius:6px;cursor:pointer;letter-spacing:0.5px;transition:filter .15s,transform .1s}
         .btn:hover{filter:brightness(1.06)}
