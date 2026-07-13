@@ -196,7 +196,7 @@ var TIETOLAATIKOT = [
   {
     id: "kirjoitustaito_historiankirjoitus", kategoria: "historia", aikakausiehto: 0, prioriteetti: "normaali", kontekstuaalinen: false,
     otsikko: { fi: "Kirjoitustaito ja historiankirjoitus" },
-    sisalto: { fi: "Kirjoitustaito syntyi itsenäisesti muutamassa paikassa maailmaa (Mesopotamia, Egypti, Kiina, Mesoamerikka) noin 3000 eaa. alkaen, ensin lähinnä varastojen ja verojen kirjanpitoon. Vasta kirjoitustaidon myötä yhteiskunnista jäi omaa, ajankohtaista kirjallista lähdeaineistoa — sitä edeltävää aikaa kutsutaan esihistoriaksi, koska siitä tiedetään vain arkeologian kautta. Pelin Muinaisaika-kauden ensimmäinen keksintö on juuri kirjoitus." },
+    sisalto: { fi: "Kirjoitustaito syntyi itsenäisesti muutamassa paikassa maailmaa: ensin Mesopotamiassa (n. 3400–3300 eaa.) ja Egyptissä (n. 3200 eaa.), paljon myöhemmin ja toisistaan riippumatta myös Kiinassa (n. 1300 eaa.) ja Mesoamerikassa (n. 900–600 eaa.) — yli tuhat vuotta jälkimmäisten jälkeen. Varhaisin kirjoitus palveli lähinnä varastojen ja verojen kirjanpitoa. Vasta kirjoitustaidon myötä yhteiskunnista jäi omaa, ajankohtaista kirjallista lähdeaineistoa — sitä edeltävää aikaa kutsutaan esihistoriaksi, koska siitä tiedetään vain arkeologian kautta. Pelin Muinaisaika-kauden ensimmäinen keksintö on juuri kirjoitus." },
   },
   {
     id: "kolumbuksen_vaihto", kategoria: "historia", aikakausiehto: 1, prioriteetti: "normaali", kontekstuaalinen: false,

@@ -47,7 +47,7 @@ Kuukausi on onnistunut, kun kaikki seuraavat toteutuvat:
 | D5 | Kevyt paikallinen telemetria + opettajan vientinappi | Anonyymi loki: avatut tietolaatikot, vuorojen määrä, sessioaika |
 | D6 | Vähintään yksi pelitestaus tehty ja dokumentoitu | Kirjallinen muistio havainnoista ja tehdyistä muutoksista |
 | D7 | Opettajan oppaan ensiversio (PDF/MD) | Sisältää tuntisuunnitelman 45 min ja 75 min oppitunneille |
-| D8 | Historiallinen varmennus valmis | Varmentamiskehikon 6 kriteeriä käyty läpi kaikille 26 laatikolle |
+| D8 | **Historiallinen varmennus valmis ✅** *(tehty 13.7.)* | Varmentamiskehikon 6 kriteeriä käyty läpi kaikille 26 laatikolle — ks. [VARMENNUSKEHIKKO.md](VARMENNUSKEHIKKO.md) ja [HISTORIALLINEN_VARMENNUS.md](HISTORIALLINEN_VARMENNUS.md) |
 | D9 | Pilottikoulujen kontaktointi aloitettu | Vähintään 5 yhteydenottoa lähetetty (tavoite: 3–5 pilottikoulua) |
 | D10 | GitHub Actions ajaa testit joka commitissa | Babel-syntaksitarkistus **(tehty 9.7.)** + jsdom-savutestit automaattisesti |
 
@@ -95,7 +95,7 @@ Kuukausi on onnistunut, kun kaikki seuraavat toteutuvat:
 |-------|---------|-------|
 | Ma 27.7. | Saavutettavuus, osa 1: modaalien focus trap, Esc sulkee, näppäimistönavigointi (Tab-järjestys), aria-labelit kuvakkeille ja sliderille. | **Peli pelattavissa ilman hiirtä ✅** *(tehty 11.7. — poikkeaa suunnitellusta järjestyksestä, koska ei-koodiin-liittyvä viikon 2 pelitestaus (ti–ke) odottaa yhä käyttäjän omaa testausta; siirryttiin seuraavaan koodauspakettiin)* |
 | Ti 28.7. | Saavutettavuus, osa 2: kontrastitarkistus (vintage-paperiteema vs. WCAG AA 4.5:1), fonttikokojen skaalautuvuus, `prefers-reduced-motion`. Automaattinen tarkistus (axe-core jsdom-testeihin). | **D4 valmis ✅; axe-testit CI:ssä ✅** *(tehty 11.7. — fonttikoot ovat px-yksiköissä kuten koko koodikanta muutenkin; selaimen sivunlaajuinen zoomaus toimii normaalisti, erillistä rem-muunnosta ei tehty tässä paketissa, ks. CHANGELOG)* |
-| Ke 29.7. | Historiallinen varmennus: käy läpi kaikki 26 laatikkoa varmentamiskehikon 6 kriteerillä. Merkitse epävarmat kohdat. Lähetä epävarmat historianopettajalle/asiantuntijalle kommentoitavaksi. | Varmennustaulukko; asiantuntijakysely liikkeellä |
+| Ke 29.7. | Historiallinen varmennus: käy läpi kaikki 26 laatikkoa varmentamiskehikon 6 kriteerillä. Merkitse epävarmat kohdat. Lähetä epävarmat historianopettajalle/asiantuntijalle kommentoitavaksi. | **Tehty 13.7. ✅** *(kehikkoa ei löytynyt reposta viittauksista huolimatta — kirjoitettu ensin auki VARMENNUSKEHIKKO.md:ksi. Kaikki 26 käyty läpi: 25 vahvistettu, 1 korjattu (Kiinan/Mesoamerikan kirjoitustaidon ajoitus), 0 asiantuntijalle lähetettävää — ei aitoja kiistanalaisuuksia löytynyt.)* |
 | To 30.7. | **PELITESTAUS 2** (jos viikon 2 testaus siirtyi, tai uusintatestaus korjatulla versiolla): painopiste tietolaatikkojen ymmärrettävyydessä ja telemetrian toimivuudessa. | Testimuistio 2 |
 | Pe 31.7. | Koulusimulaatio: testaa bundle hitaalla yhteydellä (Chrome DevTools throttling), vanhalla koneella/halvalla Chromebook-resoluutiolla (1366×768), ja ilman verkkoa. Korjaa löydökset. Viikon commit + zip. | Kestävyystarkistus dokumentoitu |
 
@@ -108,7 +108,7 @@ Kuukausi on onnistunut, kun kaikki seuraavat toteutuvat:
 | Päivä | Tehtävä | Tulos |
 |-------|---------|-------|
 | Ma 3.8. | Opettajan oppaan ensiversio: pelin pedagoginen idea, LOPS/POPS-kytkennät, 45 min ja 75 min tuntisuunnitelmat, esitystilan käyttö, telemetrialoki opettajan työkaluna, tekniset vaatimukset. | D7 luonnos |
-| Ti 4.8. | Asiantuntijapalautteen (vk 3) vienti tietolaatikkoihin — vain datatiedostomuutoksia, ei koodia. Varmennustaulukko valmiiksi. | D8 valmis |
+| Ti 4.8. | ~~Asiantuntijapalautteen (vk 3) vienti tietolaatikkoihin~~ — **ei tarvetta**, ke 29.7. varmennuksessa ei löytynyt asiantuntijalle lähetettäviä epävarmoja kohtia. Tämä päivä vapautuu muuhun (esim. viikon 3 löydösten viimeistelyyn tai puskuriksi). | D8 valmis (jo 13.7.) |
 | Ke 5.8. | **KOODIJÄÄDYTYS.** Regressiotestikierros: koko peli läpi kaikilla aikakausilla, CI vihreä, tallennuskoodi, telemetria, saavutettavuus. Versionumero 1.0-pilot. Commit + release-zip GitHubiin. | Pilottiversio jäädytetty |
 | To 6.8. | Pilottikoulujen kontaktointipaketti: saatekirje opettajille (oma verkosto + HYOL), 1 sivun esittely, linkki peliin, oppaan liite. Lähetä vähintään 5 yhteydenottoa. | D9 käynnissä |
 | Pe 7.8. | Retrospektiivi: mikä toimi, mikä ei, mitä opittiin testauksista. Elokuun suunnitelman runko (pilottien tuki, palautelomake, onnistumismittarit — liiketoimintasuunnitelman kohta 12.3). | Kuukausi paketissa |
