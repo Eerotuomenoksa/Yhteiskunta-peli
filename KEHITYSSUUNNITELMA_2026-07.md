@@ -107,7 +107,7 @@ Kuukausi on onnistunut, kun kaikki seuraavat toteutuvat:
 
 | Päivä | Tehtävä | Tulos |
 |-------|---------|-------|
-| Ma 3.8. | Opettajan oppaan ensiversio: pelin pedagoginen idea, LOPS/POPS-kytkennät, 45 min ja 75 min tuntisuunnitelmat, esitystilan käyttö, telemetrialoki opettajan työkaluna, tekniset vaatimukset. | D7 luonnos |
+| Ma 3.8. | Opettajan oppaan ensiversio: pelin pedagoginen idea, LOPS/POPS-kytkennät, 45 min ja 75 min tuntisuunnitelmat, esitystilan käyttö, telemetrialoki opettajan työkaluna, tekniset vaatimukset. | **Tehty 13.7. ✅** *(poikkeaa suunnitellusta aikataulusta — tehty nyt koska viikon 2 pelitestaus odottaa yhä käyttäjää, ja tämä on työnjaon mukaan Claude-toteutettava tehtävä, ks. [OPETTAJAN_OPAS.md](OPETTAJAN_OPAS.md). LOPS-kytkennät (HI1/HI2/HI6/YH1/YH2) ja POPS 7-9 -kytkentä tarkistettu verkkohaulla oikeista opetussuunnitelmadokumenteista, ei arvattu.)* |
 | Ti 4.8. | ~~Asiantuntijapalautteen (vk 3) vienti tietolaatikkoihin~~ — **ei tarvetta**, ke 29.7. varmennuksessa ei löytynyt asiantuntijalle lähetettäviä epävarmoja kohtia. Tämä päivä vapautuu muuhun (esim. viikon 3 löydösten viimeistelyyn tai puskuriksi). | D8 valmis (jo 13.7.) |
 | Ke 5.8. | **KOODIJÄÄDYTYS.** Regressiotestikierros: koko peli läpi kaikilla aikakausilla, CI vihreä, tallennuskoodi, telemetria, saavutettavuus. Versionumero 1.0-pilot. Commit + release-zip GitHubiin. | Pilottiversio jäädytetty |
 | To 6.8. | Pilottikoulujen kontaktointipaketti: saatekirje opettajille (oma verkosto + HYOL), 1 sivun esittely, linkki peliin, oppaan liite. Lähetä vähintään 5 yhteydenottoa. | D9 käynnissä |
